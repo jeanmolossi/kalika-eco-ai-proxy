@@ -2,9 +2,11 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
 	"github.com/labstack/echo/v4"
@@ -12,26 +14,26 @@ import (
 
 func (h *Handlers) Embeddings(c echo.Context) error {
 	r := c.Request()
-	w := c.Response()
 
 	ctx := r.Context()
 
 	apiKey := extractAPIKey(r.Header.Get("Authorization"))
 	if apiKey == "" {
-		http.Error(w, "missing api key", http.StatusUnauthorized)
-		return nil
+		return httpx.WriteProblem(c, apperr.Unauthorized(errors.New("missing api key")))
 	}
 
-	tcfg, err := h.Tenants.FindByAPIKey(apiKey)
-	if err != nil || tcfg == nil {
-		http.Error(w, "invalid api key", http.StatusUnauthorized)
-		return nil
+	tcfg, err := h.Tenants.FindByAPIKey(ctx, apiKey)
+	if err != nil {
+		return httpx.WriteProblem(c, apperr.Unauthorized(err))
+	}
+
+	if tcfg == nil {
+		return httpx.WriteProblem(c, apperr.Unauthorized(errors.New("missing config")))
 	}
 
 	var dto embedRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
-		return nil
+		return httpx.WriteProblem(c, apperr.BadRequest(err))
 	}
 
 	req := llm.EmbedRequest{
@@ -40,9 +42,9 @@ func (h *Handlers) Embeddings(c echo.Context) error {
 	}
 
 	out, err := h.EmbeddingsUseCase.Embeddings(ctx, app.EmbeddingsInput{
-		UserID:  "uiser-id",
-		Request: req,
-		Tenant:  *tcfg,
+		Request:  req,
+		Tenant:   *tcfg,
+		Metadata: dto.Metadata,
 	})
 	if err != nil {
 		return httpx.WriteProblem(c, err)

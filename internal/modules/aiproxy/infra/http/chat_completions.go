@@ -14,8 +14,6 @@ import (
 
 func (h *Handlers) ChatCompletions(c echo.Context) error {
 	r := c.Request()
-	w := c.Response()
-
 	ctx := r.Context()
 
 	apiKey := extractAPIKey(r.Header.Get("Authorization"))
@@ -23,15 +21,13 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 		return httpx.WriteProblem(c, apperr.Unauthorized(errors.New("missin api key")))
 	}
 
-	tcfg, err := h.Tenants.FindByAPIKey(apiKey)
+	tcfg, err := h.Tenants.FindByAPIKey(ctx, apiKey)
 	if err != nil || tcfg == nil {
-		http.Error(w, "invalid api key", http.StatusUnauthorized)
 		return httpx.WriteProblem(c, apperr.Unauthorized(errors.New("invalid api key")))
 	}
 
 	var dto chatRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		http.Error(w, "invalid body", http.StatusBadRequest)
 		return httpx.WriteProblem(c, apperr.BadRequest(errors.New("invalid body")))
 	}
 
@@ -46,8 +42,9 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 	}
 
 	out, err := h.ChatUseCase.Chat(ctx, app.ChatInput{
-		UserID:  "user-id-1",
-		Request: req,
+		Request:  req,
+		Tenant:   *tcfg,
+		Metadata: dto.Metadata,
 	})
 	if err != nil {
 		return httpx.WriteProblem(c, err)

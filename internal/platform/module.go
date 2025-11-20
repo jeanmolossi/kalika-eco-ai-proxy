@@ -6,6 +6,8 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/cache"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database/pg"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
@@ -36,7 +38,9 @@ func (m *module) Weight() int { return 9 }
 func (m *module) Provide(ctx context.Context, c *core.Container) error {
 	logger := c.Logger()
 
-	c.Set(core.TenantStoreModule, tenant.NewInMemoryStore())
+	conn := core.MustGet[*pg.DB](c, database.PgConn)
+
+	c.Set(core.TenantStoreModule, tenant.NewPostgresStore(conn.Pool()))
 	c.Set(core.RateLimiterModule, ratelimit.NewNoopLimiter())
 	c.Set(core.SemanticCacheModule, cache.NewNoopSemanticCache())
 	c.Set(core.GuardrailsModule, guardrails.NewNoopGuardrails())

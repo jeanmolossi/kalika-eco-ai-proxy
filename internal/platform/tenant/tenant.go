@@ -1,18 +1,42 @@
 package tenant
 
+import (
+	"context"
+	"encoding/json"
+	"errors"
+)
+
+var (
+	ErrNotFound       = errors.New("tenant not found")
+	ErrInvalidAPIKey  = errors.New("invalid api key")
+	ErrInactiveTenant = errors.New("inactive tenant")
+)
+
+type PolicyConfig struct {
+	ModelsAllowed []string        `json:"models_allowed,omitempty"`
+	Routing       json.RawMessage `json:"routing,omitempty"`
+	Guardrails    json.RawMessage `json:"guardrails,omitempty"`
+}
+
 type TenantConfig struct {
-	ID             string
-	Name           string
-	Plan           string
-	MaxTokensMonth int64
-	ModelsAllowed  []string
-	DefaultModel   string
-	// policies de guardrail, cache, etc
+	ID                string
+	Code              string
+	Name              string
+	Status            string
+	PlanCode          string
+	MaxTokensMonth    int64
+	MaxRequestsMinute int64
+
+	DefaultModel        string
 	EnableSemanticCache bool
-	MaxRequestsMinute   int64
+	CacheTTLSecs        int32
+	MaxPromptTokens     int32
+	MaxCompletionTokens int32
+	PolicyConfigRaw     json.RawMessage
+	ParsedPolicyConfig  *PolicyConfig
 }
 
 type Store interface {
-	FindByAPIKey(apiKey string) (*TenantConfig, error)
-	FindByID(id string) (*TenantConfig, error)
+	FindByAPIKey(ctx context.Context, apiKey string) (*TenantConfig, error)
+	FindByID(ctx context.Context, tenantID string) (*TenantConfig, error)
 }
