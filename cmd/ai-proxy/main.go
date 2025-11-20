@@ -9,6 +9,7 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/httpx"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/logger"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy"
 )
 
 func main() {
@@ -19,11 +20,16 @@ func main() {
 
 	defer logger.Flush()
 
-	registry := core.NewRegistry()
+	registry := core.NewRegistry(
+		aiproxy.NewModule(),
+	)
 
 	app.StartServer = httpx.Start(httpx.Config{
 		Host:                cfg.Server.Host,
 		Port:                cfg.Server.Port,
+		EnableTLS:           cfg.Server.EnableTLS,
+		TLSCertFile:         cfg.Server.TLSCertFile,
+		TLSKeyFile:          cfg.Server.TLSKeyFile,
 		BasePath:            cfg.Server.BasePath,
 		ReadTimeout:         cfg.Server.ReadTimeout,
 		ReadHeaderTimeout:   2 * time.Second,

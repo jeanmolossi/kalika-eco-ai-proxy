@@ -7,4 +7,8 @@ type HTTPServer struct {
 	Port        int           `env:"PORT"         envDefault:"8081"`
 	BasePath    string        `env:"BASE_PATH"    envDefault:"/api/v1"`
 	ReadTimeout time.Duration `env:"READ_TIMEOUT" envDefault:"5s"`
+
+	TLSCertFile string `env:"TLS_CERTFILE"`
+	TLSKeyFile  string `env:"TLS_KEYFILE"`
+	EnableTLS   bool   `env:"ENABLE_TLS"`
 }
