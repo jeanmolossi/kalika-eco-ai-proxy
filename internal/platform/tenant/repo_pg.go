@@ -189,6 +189,7 @@ func extractPrefix(apiKey string) (string, error) {
 	}
 
 	prefix := apiKey[:idx]
+
 	return prefix, nil
 }
 

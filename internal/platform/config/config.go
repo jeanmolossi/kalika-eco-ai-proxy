@@ -13,9 +13,10 @@ type Config struct {
 
 	// Nested configs
 
-	Log    Log        `envPrefix:"LOG_"`
-	Server HTTPServer `envPrefix:"SERVER_"`
-	PgDB   Postgres   `envPrefix:"POSTGRES_"`
+	Log       Log        `envPrefix:"LOG_"`
+	Server    HTTPServer `envPrefix:"SERVER_"`
+	PgDB      Postgres   `envPrefix:"POSTGRES_"`
+	RateLimit RateLimit  `envPrefix:"RATELIMIT_"`
 }
 
 var Load = sync.OnceValue(loadEnv)

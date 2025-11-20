@@ -36,12 +36,18 @@ func (m *module) Weight() int { return 9 }
 
 // Provide implements core.Module.
 func (m *module) Provide(ctx context.Context, c *core.Container) error {
+	conf := c.Config()
 	logger := c.Logger()
 
 	conn := core.MustGet[*pg.DB](c, database.PgConn)
 
+	rl, err := ratelimit.NewLimiter(conf.RateLimit)
+	if err != nil {
+		return err
+	}
+
 	c.Set(core.TenantStoreModule, tenant.NewPostgresStore(conn.Pool()))
-	c.Set(core.RateLimiterModule, ratelimit.NewNoopLimiter())
+	c.Set(core.RateLimiterModule, rl)
 	c.Set(core.SemanticCacheModule, cache.NewNoopSemanticCache())
 	c.Set(core.GuardrailsModule, guardrails.NewNoopGuardrails())
 	c.Set(core.UsagePublisherModule, usage.NewLogPublisher(logger))
