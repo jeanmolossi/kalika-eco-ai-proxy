@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1.20
+
+############################
+# Stage 1: tools (reflex)
+############################
+FROM golang:1.25-alpine3.22 AS tools
+
+# Diretório de trabalho só pra ferramentas
+WORKDIR /tools
+
+# Instala dependências básicas
+RUN apk add --no-cache ca-certificates git && update-ca-certificates
+
+# Instala o reflex uma vez só; fica cacheado enquanto essa linha não mudar
+RUN GOBIN=/tmp/bin go install github.com/cespare/reflex@latest
+
+############################
+# Stage 2: dev
+############################
+FROM golang:1.25-alpine3.22 AS dev
+
+WORKDIR /app
+
+# Dependências do container de dev
+RUN apk add --no-cache socat ca-certificates && update-ca-certificates
+
+# Copia o binário do reflex já pronto
+COPY --from=tools /tmp/bin/reflex /usr/local/bin/reflex
+
+# Copia só os arquivos de dependência primeiro (melhor uso de cache)
+COPY go.mod go.sum ./
+
+# Usa cache de módulos entre builds
+RUN --mount=type=cache,target=/go/pkg/mod \
+  go mod download
+
+# Agora sim, copia o resto do código
+COPY . .
+
+EXPOSE 8081
+
+CMD ["reflex", "-c", "reflex.conf"]
+

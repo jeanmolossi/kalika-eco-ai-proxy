@@ -1,0 +1,116 @@
+# GolangCI-Lint v2 configuration file
+# See https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m # tempo máximo de execução do linter
+  tests: true # inclui testes na análise
+
+formatters:
+  enable:
+    - gofmt # formatação padrão gofmt
+
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/jeanmolossi/kalika-jobs # prefixo de imports locais
+
+linters:
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+  enable:
+    - errcheck # verifica erros não tratados
+    - staticcheck # análises estáticas avançadas
+    - unused # variáveis não utilizadas
+    - dupl # detecta duplicações de código
+    - gocyclo # mede complexidade ciclomática
+    - ineffassign
+    - govet
+    - canonicalheader
+    - copyloopvar
+    - gosec
+    - importas
+    - lll
+    - misspell
+    - nlreturn
+    - prealloc
+    - spancheck
+    - sqlclosecheck
+    - tagalign
+    - testifylint
+    - thelper
+    - varnamelen
+    - whitespace
+    - wsl_v5
+
+  settings:
+    staticcheck:
+      checks:
+        [
+          "all",
+          "-ST1000",
+          "-ST1003",
+          "-ST1016",
+          "-ST1020",
+          "-ST1021",
+          "-ST1022",
+        ]
+
+    varnamelen:
+      ignore-names:
+        - err
+        - db
+        - ok
+        - w
+        - id
+        - tx
+        - fn
+        - i
+        - ip
+        - ua
+      ignore-decls:
+        - e *echo.Echo
+        - in RegisterInput
+        - c echo.Context
+      ignore-map-index-ok: true
+      max-distance: 8
+
+    wsl_v5:
+      branch-max-lines: 5
+      disable:
+        - inc-dec
+
+    errcheck:
+      exclude-functions:
+        - (*database/sql.DB).Close
+        - (net/http.ResponseWriter).Write
+
+    tagalign:
+      sort: false
+
+    nlreturn:
+      block-size: 3
+
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+
+    lll:
+      tab-width: 4
+      line-length: 130
+
+issues:
+  max-issues-per-linter: 0 # ilimitado por linter
+  max-same-issues: 0 # ilimitado de mesma issue
+
+output:
+  formats:
+    text:
+      colors: true # saída colorida com número de linhas
