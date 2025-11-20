@@ -7,4 +7,12 @@ const (
 	ConfigModule = "core:config"
 	LoggerModule = "core:logger"
 	EchoModule   = "core:echo"
+
+	TenantStoreModule    = "platform:tenantstore"
+	RateLimiterModule    = "platform:ratelimiter"
+	SemanticCacheModule  = "platform:semantic_cache"
+	GuardrailsModule     = "platform:guardrails"
+	UsagePublisherModule = "platform:usage_publisher"
+	AuditPublisherModule = "platform:audit_publisher"
+	RouterModule         = "platform:router"
 )

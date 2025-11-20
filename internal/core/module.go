@@ -16,12 +16,12 @@ type Module interface {
 	// The smaller the value, the earlier the module runs (migrations/provide/routes/start).
 	Weight() int
 
-	// Migrations is the point to run database migrations, seeds, etc.
+	// Migrations is the point to retrieve database migrations, seeds, etc.
 	// It can be a no-op if not needed.
-	Migrations(ctx context.Context, c *Container) error
+	Migrations(ctx context.Context, c *Container) ([]MigrationFile, error)
 
 	// Provide registers dependencies in the container (repos, services, use-cases).
-	Provide(c *Container) error
+	Provide(ctx context.Context, c *Container) error
 
 	// Routes registers the HTTP routes of the module.
 	// There is no need to start the server here, just register in e.

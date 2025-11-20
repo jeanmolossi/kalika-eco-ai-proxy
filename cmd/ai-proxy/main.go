@@ -5,11 +5,13 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/httpx"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/logger"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/logger"
 )
 
 func main() {
@@ -21,6 +23,8 @@ func main() {
 	defer logger.Flush()
 
 	registry := core.NewRegistry(
+		database.NewModule(),
+		platform.NewModule(),
 		aiproxy.NewModule(),
 	)
 

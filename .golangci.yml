@@ -45,7 +45,6 @@ linters:
     - tagalign
     - testifylint
     - thelper
-    - varnamelen
     - whitespace
     - wsl_v5
 
@@ -61,25 +60,6 @@ linters:
           "-ST1021",
           "-ST1022",
         ]
-
-    varnamelen:
-      ignore-names:
-        - err
-        - db
-        - ok
-        - w
-        - id
-        - tx
-        - fn
-        - i
-        - ip
-        - ua
-      ignore-decls:
-        - e *echo.Echo
-        - in RegisterInput
-        - c echo.Context
-      ignore-map-index-ok: true
-      max-distance: 8
 
     wsl_v5:
       branch-max-lines: 5

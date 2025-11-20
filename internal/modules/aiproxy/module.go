@@ -5,6 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/infra"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/infra/http"
 	"github.com/labstack/echo/v4"
 )
 
@@ -30,18 +32,9 @@ func (m *module) Weight() int {
 	return 10
 }
 
-// Migrations runs all database migrations required by this module.
-// For the MVP, this is a no-op and can be wired later to a real migration engine.
-func (m *module) Migrations(ctx context.Context, c *core.Container) error {
-	// TODO: plug real migrations here (e.g., goose, atlas, migrate).
-	log := c.Logger()
-	log.Info("aiproxy: migrations skipped (MVP)")
-	return nil
-}
-
 // Provide registers all dependencies required by this module into the container.
 // This includes tenant store, rate limiter, semantic cache, router, guardrails, usage/audit publishers, etc.
-func (m *module) Provide(c *core.Container) error {
+func (m *module) Provide(ctx context.Context, c *core.Container) error {
 	log := c.Logger()
 	cfg := c.Config()
 
@@ -59,6 +52,11 @@ func (m *module) Provide(c *core.Container) error {
 	return nil
 }
 
+// Migrations implements core.Module.
+func (m *module) Migrations(ctx context.Context, c *core.Container) ([]core.MigrationFile, error) {
+	return infra.Migrations(ctx, m)
+}
+
 // Routes registers HTTP routes handled by this module.
 // It wires the AI proxy HTTP endpoints to Echo using the previously built dependencies.
 func (m *module) Routes(e *echo.Echo, c *core.Container) error {
@@ -67,7 +65,13 @@ func (m *module) Routes(e *echo.Echo, c *core.Container) error {
 
 	deps := MustDepsFromContainer(c)
 
-	registerRoutes(e, deps)
+	handlers := http.NewHandlers(
+		deps.TenantStore,
+		deps.Service, // [app.ChatUseCase]
+		deps.Service, // [app.EmbeddingsUseCase]
+	)
+
+	http.RegisterRoutes(e, handlers)
 
 	return nil
 }

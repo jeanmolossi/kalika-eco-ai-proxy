@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
 	"github.com/labstack/echo/v4"
 )
 
@@ -98,18 +98,21 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 	for _, m := range mods {
 		a.L.Info("providing deps", slog.String("module", m.Name()))
 
-		if err := m.Provide(a.C); err != nil {
+		if err := m.Provide(ctx, a.C); err != nil {
 			return fmt.Errorf("core.App: provide failed for module %s: %w", m.Name(), err)
 		}
 	}
 
 	// 5) Migrations
-	for _, m := range mods {
-		a.L.Info("running migrations", slog.String("module", m.Name()))
+	a.L.Info("running migrations")
 
-		if err := m.Migrations(ctx, a.C); err != nil {
-			return fmt.Errorf("core.App: migrations failed for module %s: %w", m.Name(), err)
-		}
+	conn := a.C.MustGet("database:pgconn").(UnwrapConn)
+	if conn == nil {
+		return fmt.Errorf("core.App: unable to retrieve db connection <nil>")
+	}
+
+	if err := RunAllMigrations(ctx, conn.SQL(), mods); err != nil {
+		return fmt.Errorf("core.App: migrations failed: %w", err)
 	}
 
 	// 6) Optional hook after modules (already with deps registered)
