@@ -9,7 +9,8 @@ import (
 type Config struct {
 	// Root configs
 
-	Environment Environment `env:"ENVIRONMENT" envDefault:"production"`
+	Environment       Environment `env:"ENVIRONMENT"        envDefault:"production"`
+	GuardrailsEnabled bool        `env:"GUARDRAILS_ENABLED" envDefault:"true"`
 
 	// Nested configs
 

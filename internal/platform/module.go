@@ -56,7 +56,7 @@ func (m *module) Provide(ctx context.Context, c *core.Container) error {
 	c.Set(core.TenantStoreModule, tenant.NewPostgresStore(conn.Pool()))
 	c.Set(core.RateLimiterModule, rl)
 	c.Set(core.SemanticCacheModule, cache.NewNoopSemanticCache())
-	c.Set(core.GuardrailsModule, guardrails.NewNoopGuardrails())
+	c.Set(core.GuardrailsModule, guardrails.ProvideGuardrails(c))
 	c.Set(core.UsagePublisherModule, usage.NewLogPublisher(logger))
 	c.Set(core.AuditPublisherModule, audit.NewLogPublisher(logger))
 	c.Set(core.RouterModule, router.NewSimpleRouter(llmClient))

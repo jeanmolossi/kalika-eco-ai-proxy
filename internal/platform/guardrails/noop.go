@@ -2,9 +2,6 @@ package guardrails
 
 import (
 	"context"
-
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
 )
 
 // NoopGuardrails is a guardrails implementation that does not enforce
@@ -12,16 +9,16 @@ import (
 type NoopGuardrails struct{}
 
 // NewNoopGuardrails creates a new NoopGuardrails instance.
-func NewNoopGuardrails() *NoopGuardrails {
+func NewNoopGuardrails() Engine {
 	return &NoopGuardrails{}
 }
 
-// PreProcessChat returns the original request without changes.
-func (g *NoopGuardrails) PreProcessChat(ctx context.Context, t tenant.TenantConfig, req llm.ChatRequest) (llm.ChatRequest, error) {
-	return req, nil
+// EvaluateInput implements Engine.
+func (g *NoopGuardrails) EvaluateInput(ctx context.Context, gx Context) (Decision, error) {
+	return Decision{}, nil
 }
 
-// PostProcessChat returns the original response without changes.
-func (g *NoopGuardrails) PostProcessChat(ctx context.Context, t tenant.TenantConfig, req llm.ChatRequest, resp llm.ChatResponse) (llm.ChatResponse, error) {
-	return resp, nil
+// EvaluateOutput implements Engine.
+func (g *NoopGuardrails) EvaluateOutput(ctx context.Context, gx Context) (Decision, error) {
+	return Decision{}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
@@ -80,8 +81,8 @@ type SemanticCache interface {
 
 // ChatGuardrails represents the subset of guardrails features used by the chat flow.
 type ChatGuardrails interface {
-	PreProcessChat(ctx context.Context, t tenant.TenantConfig, req llm.ChatRequest) (llm.ChatRequest, error)
-	PostProcessChat(ctx context.Context, t tenant.TenantConfig, req llm.ChatRequest, resp llm.ChatResponse) (llm.ChatResponse, error)
+	EvaluateInput(ctx context.Context, gx guardrails.Context) (guardrails.Decision, error)
+	EvaluateOutput(ctx context.Context, gx guardrails.Context) (guardrails.Decision, error)
 }
 
 // ChatRouter is the routing interface for chat and embeddings.

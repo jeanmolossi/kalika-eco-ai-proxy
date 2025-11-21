@@ -34,6 +34,8 @@ func newLogger() *slog.Logger {
 		AddSource: true,
 	}))
 
+	slog.SetDefault(logger)
+
 	return logger
 }
 

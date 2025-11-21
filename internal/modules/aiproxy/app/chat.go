@@ -2,6 +2,11 @@ package app
 
 import (
 	"context"
+	"errors"
+	"time"
+
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 )
 
 // Chat handles a full chat completion flow for a given tenant.
@@ -11,9 +16,29 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	req.Extras = in.Metadata
 
 	// Pre guardrails.
-	req, err := s.guardrails.PreProcessChat(ctx, in.Tenant, req)
+	decision, err := s.guardrails.EvaluateInput(ctx, guardrails.Context{
+		TenantID:      in.Tenant.ID,
+		APIKeyID:      "",
+		Endpoint:      "chat.completions",
+		Model:         req.Model,
+		UserID:        "",
+		RequestID:     "",
+		OccurredAt:    time.Now(),
+		InputMessages: flattenChatMessages(req.Messages),
+		Tags: map[string]string{
+			"source": "aiproxy.chat",
+		},
+	})
 	if err != nil {
 		return ChatOutput{}, err
+	}
+
+	switch decision.Action {
+	case guardrails.ActionBlock:
+		return ChatOutput{}, apperr.BadRequest(errors.New(decision.Reason))
+	case guardrails.ActionRewrite:
+		req.Messages = rebuildChatMessages(req.Messages, decision.RewrittenInputMessages)
+	default:
 	}
 
 	// Optional semantic cache.
@@ -32,7 +57,7 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	}
 
 	// Post guardrails.
-	resp, err = s.guardrails.PostProcessChat(ctx, in.Tenant, req, resp)
+	decision, err = s.guardrails.EvaluateOutput(ctx, guardrails.Context{})
 	if err != nil {
 		return ChatOutput{}, err
 	}

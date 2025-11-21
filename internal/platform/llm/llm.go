@@ -41,3 +41,5 @@ type Client interface {
 	Chat(ctx context.Context, req ChatRequest) (ChatResponse, error)
 	Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error)
 }
+
+const RoleUser = "user"
