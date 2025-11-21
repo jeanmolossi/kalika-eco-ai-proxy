@@ -16,13 +16,3 @@ type embedRequestDTO struct {
 	Input    []string          `json:"input"`
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
-
-type embedVectorDTO struct {
-	Index     int       `json:"index"`
-	Embedding []float32 `json:"embedding"`
-}
-
-type embedResponseDTO struct {
-	Model string           `json:"model"`
-	Data  []embedVectorDTO `json:"data"`
-}
