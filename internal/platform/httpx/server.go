@@ -72,7 +72,7 @@ func Start(cfg Config) func(ctx context.Context, e *echo.Echo) func(context.Cont
 		var middlewares []echo.MiddlewareFunc
 
 		middlewares = append(middlewares,
-			middleware.RequestID(),
+			RequestID(),
 			middleware.Recover(),
 			middleware.Secure(),
 			middleware.Gzip(),

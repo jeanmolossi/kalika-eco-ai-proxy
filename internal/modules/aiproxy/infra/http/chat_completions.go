@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -19,7 +20,7 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 
 	apiKey := extractAPIKey(r.Header.Get("Authorization"))
 	if apiKey == "" {
-		return httpx.WriteProblem(c, apperr.Unauthorized(errors.New("missin api key")))
+		return httpx.WriteProblem(c, apperr.Unauthorized(errors.New("missing api key")))
 	}
 
 	tcfg, err := h.Tenants.FindByAPIKey(ctx, apiKey)
@@ -61,6 +62,7 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 	out, err := h.ChatUseCase.Chat(ctx, app.ChatInput{
 		Request:  req,
 		Tenant:   *tcfg,
+		APIKey:   apiKey,
 		Metadata: dto.Metadata,
 	})
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 )
 
 // Chat handles a full chat completion flow for a given tenant.
@@ -14,21 +15,24 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	req := in.Request
 	req.TenantID = in.Tenant.ID
 	req.Extras = in.Metadata
+	now := time.Now()
 
-	// Pre guardrails.
-	decision, err := s.guardrails.EvaluateInput(ctx, guardrails.Context{
+	gctx := guardrails.Context{
 		TenantID:      in.Tenant.ID,
-		APIKeyID:      "",
+		APIKeyID:      in.APIKey,
 		Endpoint:      "chat.completions",
 		Model:         req.Model,
+		RequestID:     httpx.RequestIDFromCtx(ctx),
 		UserID:        "",
-		RequestID:     "",
-		OccurredAt:    time.Now(),
+		OccurredAt:    now,
 		InputMessages: flattenChatMessages(req.Messages),
 		Tags: map[string]string{
 			"source": "aiproxy.chat",
 		},
-	})
+	}
+
+	// Pre guardrails.
+	decision, err := s.guardrails.EvaluateInput(ctx, gctx)
 	if err != nil {
 		return ChatOutput{}, err
 	}
@@ -56,8 +60,10 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 		return ChatOutput{}, err
 	}
 
+	gctx.OutputMessages = flattenChatMessages(resp.Messages)
+
 	// Post guardrails.
-	decision, err = s.guardrails.EvaluateOutput(ctx, guardrails.Context{})
+	decision, err = s.guardrails.EvaluateOutput(ctx, gctx)
 	if err != nil {
 		return ChatOutput{}, err
 	}

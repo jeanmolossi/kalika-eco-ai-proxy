@@ -21,6 +21,7 @@ import (
 // ChatInput represents the high-level input for a chat completion call.
 type ChatInput struct {
 	Tenant   tenant.TenantConfig
+	APIKey   string
 	UserID   string
 	Metadata map[string]string
 	Request  llm.ChatRequest

@@ -63,18 +63,27 @@ const (
 	RuleKindMaxLength    RuleKind = "max_length"
 )
 
+type RuleConfig struct {
+	Phase       Phase    `json:"phase"`
+	Action      Action   `json:"action"`
+	Pattern     string   `json:"pattern,omitempty"` // regex ou valor numérico em string
+	Replacement string   `json:"Replacement,omitempty"`
+	MaxLength   *int     `json:"max_length,omitempty"`
+	Severity    string   `json:"severity,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+}
+
 type Rule struct {
-	ID          string
-	TenantID    string
-	Phase       Phase
-	Kind        RuleKind
-	Action      Action
-	Pattern     string // regex ou valor numérico em string
-	Replacement string
-	Priority    int
-	Enabled     bool
+	ID       string
+	TenantID string
+	Name     string
+	Kind     RuleKind
+	IsActive bool
+	Priority int
+
+	Config RuleConfig
 }
 
 type RuleRepository interface {
-	ListRulesForTenant(ctx context.Context, tenantID string, phase Phase) ([]Rule, error)
+	ListRulesForTenantPhase(ctx context.Context, tenantID string, phase Phase) ([]Rule, error)
 }

@@ -2,12 +2,11 @@ package guardrails
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"regexp"
 	"slices"
 	"sort"
-	"strconv"
-	"strings"
 )
 
 type simpleEngine struct {
@@ -27,7 +26,7 @@ func NewSimpleEngine(repo RuleRepository, logger *slog.Logger) Engine {
 }
 
 func (e *simpleEngine) EvaluateInput(ctx context.Context, gx Context) (Decision, error) {
-	rules, err := e.repo.ListRulesForTenant(ctx, gx.TenantID, PhaseInput)
+	rules, err := e.repo.ListRulesForTenantPhase(ctx, gx.TenantID, PhaseInput)
 	if err != nil {
 		return Decision{}, err
 	}
@@ -36,7 +35,7 @@ func (e *simpleEngine) EvaluateInput(ctx context.Context, gx Context) (Decision,
 }
 
 func (e *simpleEngine) EvaluateOutput(ctx context.Context, gx Context) (Decision, error) {
-	rules, err := e.repo.ListRulesForTenant(ctx, gx.TenantID, PhaseOutput)
+	rules, err := e.repo.ListRulesForTenantPhase(ctx, gx.TenantID, PhaseOutput)
 	if err != nil {
 		return Decision{}, err
 	}
@@ -69,9 +68,6 @@ func (e *simpleEngine) applyRules(
 	copy(rewritten, messages)
 
 	for _, rule := range rules {
-		if !rule.Enabled {
-			continue
-		}
 
 		switch rule.Kind {
 		case RuleKindRegexBlock:
@@ -104,11 +100,11 @@ func (e *simpleEngine) applyRules(
 			}
 
 		case RuleKindMaxLength:
-			maxLen, err := strconv.Atoi(strings.TrimSpace(rule.Pattern))
-			if err != nil {
-				e.logger.Warn("invalid max_length rule", "rule_id", rule.ID, "pattern", rule.Pattern, "err", err)
+			if rule.Config.MaxLength == nil {
 				continue
 			}
+
+			maxLen := *rule.Config.MaxLength
 
 			totalLen := 0
 			for _, m := range rewritten {
@@ -116,7 +112,7 @@ func (e *simpleEngine) applyRules(
 			}
 
 			if totalLen > maxLen {
-				switch rule.Action {
+				switch rule.Config.Action {
 				case ActionBlock:
 					decision.Action = ActionBlock
 					decision.Reason = "blocked_by_max_length"
@@ -149,7 +145,7 @@ func (e *simpleEngine) applyRules(
 }
 
 func ruleMatchesRegex(rule Rule, msgs []string) (bool, error) {
-	re, err := regexp.Compile(rule.Pattern)
+	re, err := regexp.Compile(rule.Config.Pattern)
 	if err != nil {
 		return false, err
 	}
@@ -158,7 +154,7 @@ func ruleMatchesRegex(rule Rule, msgs []string) (bool, error) {
 }
 
 func ruleRewriteRegex(rule Rule, msgs []string) ([]string, bool, error) {
-	re, err := regexp.Compile(rule.Pattern)
+	re, err := regexp.Compile(rule.Config.Pattern)
 	if err != nil {
 		return nil, false, err
 	}
@@ -169,7 +165,7 @@ func ruleRewriteRegex(rule Rule, msgs []string) ([]string, bool, error) {
 	for i, m := range msgs {
 		if re.MatchString(m) {
 			hit = true
-			out[i] = re.ReplaceAllString(m, rule.Replacement)
+			out[i] = re.ReplaceAllString(m, rule.Config.Replacement)
 		} else {
 			out[i] = m
 		}
