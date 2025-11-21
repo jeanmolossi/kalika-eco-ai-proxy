@@ -12,6 +12,6 @@ func NewNoopLimiter() *NoopLimiter {
 }
 
 // Allow always returns true and does not enforce any limits.
-func (l *NoopLimiter) Allow(ctx context.Context, tenantID, key string, tokens int) (bool, error) {
-	return true, nil
+func (l *NoopLimiter) Allow(ctx context.Context, tenantID, key string, tokens int) (Result, error) {
+	return Result{Allowed: true}, nil
 }

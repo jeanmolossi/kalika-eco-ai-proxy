@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
@@ -39,6 +40,22 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 		TopP:        dto.TopP,
 		TenantID:    tcfg.ID,
 		Extras:      dto.Metadata,
+	}
+
+	tokenCount, err := h.Tokenizr.CountChatTokens(dto.Model, dto.Messages)
+	if err != nil {
+		return httpx.WriteProblem(c, err)
+	}
+
+	res, err := h.Limiter.Allow(ctx, tcfg.ID, "chat", tokenCount)
+	if err != nil {
+		return httpx.WriteProblem(c, err)
+	}
+
+	httpx.SetRateLimitHeaders(c.Response().Header(), res, time.Now())
+
+	if !res.Allowed {
+		return httpx.WriteProblem(c, apperr.TooManyRequests(res.AsError()))
 	}
 
 	out, err := h.ChatUseCase.Chat(ctx, app.ChatInput{

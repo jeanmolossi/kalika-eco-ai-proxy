@@ -4,11 +4,15 @@ import (
 	"strings"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
 )
 
 type Handlers struct {
-	Tenants tenant.Store
+	Tenants  tenant.Store
+	Limiter  ratelimit.Limiter
+	Tokenizr tokenizer.TokenCounter
 
 	ChatUseCase       app.ChatUseCase
 	EmbeddingsUseCase app.EmbeddingsUseCase
@@ -16,11 +20,15 @@ type Handlers struct {
 
 func NewHandlers(
 	tenants tenant.Store,
+	limiter ratelimit.Limiter,
+	tokenizr tokenizer.TokenCounter,
 	chat app.ChatUseCase,
 	embeddings app.EmbeddingsUseCase,
 ) *Handlers {
 	return &Handlers{
 		Tenants:           tenants,
+		Limiter:           limiter,
+		Tokenizr:          tokenizr,
 		ChatUseCase:       chat,
 		EmbeddingsUseCase: embeddings,
 	}

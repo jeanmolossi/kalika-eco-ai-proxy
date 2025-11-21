@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
@@ -39,6 +40,22 @@ func (h *Handlers) Embeddings(c echo.Context) error {
 	req := llm.EmbedRequest{
 		Model: dto.Model,
 		Input: dto.Input,
+	}
+
+	tokenCount, err := h.Tokenizr.CountEmbeddingTokens(dto.Model, dto.Input)
+	if err != nil {
+		return httpx.WriteProblem(c, err)
+	}
+
+	limited, err := h.Limiter.Allow(ctx, tcfg.ID, "embeddings", tokenCount)
+	if err != nil {
+		return httpx.WriteProblem(c, err)
+	}
+
+	httpx.SetRateLimitHeaders(c.Response().Header(), limited, time.Now())
+
+	if !limited.Allowed {
+		return httpx.WriteProblem(c, apperr.TooManyRequests(limited.AsError()))
 	}
 
 	out, err := h.EmbeddingsUseCase.Embeddings(ctx, app.EmbeddingsInput{

@@ -13,6 +13,7 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/router"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
 	"github.com/labstack/echo/v4"
 )
@@ -46,15 +47,20 @@ func (m *module) Provide(ctx context.Context, c *core.Container) error {
 		return err
 	}
 
+	llmClient := llm.NewStubClient()
+
+	tokenzr := tokenizer.NewOpenAITikTokenCounter(map[string]string{
+		"stub-model": "gpt-4o-mini",
+	})
+
 	c.Set(core.TenantStoreModule, tenant.NewPostgresStore(conn.Pool()))
 	c.Set(core.RateLimiterModule, rl)
 	c.Set(core.SemanticCacheModule, cache.NewNoopSemanticCache())
 	c.Set(core.GuardrailsModule, guardrails.NewNoopGuardrails())
 	c.Set(core.UsagePublisherModule, usage.NewLogPublisher(logger))
 	c.Set(core.AuditPublisherModule, audit.NewLogPublisher(logger))
-
-	llmClient := llm.NewStubClient()
 	c.Set(core.RouterModule, router.NewSimpleRouter(llmClient))
+	c.Set(core.TokenizerModule, tokenzr)
 
 	return nil
 }

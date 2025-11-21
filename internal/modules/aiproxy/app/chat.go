@@ -1,25 +1,17 @@
 package app
 
-import "context"
+import (
+	"context"
+)
 
 // Chat handles a full chat completion flow for a given tenant.
 func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
-	// Rate limit per tenant.
-	ok, err := s.limiter.Allow(ctx, in.Tenant.ID, "chat", 1)
-	if err != nil {
-		return ChatOutput{}, err
-	}
-
-	if !ok {
-		return ChatOutput{}, ErrRateLimited
-	}
-
 	req := in.Request
 	req.TenantID = in.Tenant.ID
 	req.Extras = in.Metadata
 
 	// Pre guardrails.
-	req, err = s.guardrails.PreProcessChat(ctx, in.Tenant, req)
+	req, err := s.guardrails.PreProcessChat(ctx, in.Tenant, req)
 	if err != nil {
 		return ChatOutput{}, err
 	}

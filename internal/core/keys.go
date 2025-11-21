@@ -15,4 +15,5 @@ const (
 	UsagePublisherModule = "platform:usage_publisher"
 	AuditPublisherModule = "platform:audit_publisher"
 	RouterModule         = "platform:router"
+	TokenizerModule      = "platform:tokenizer"
 )

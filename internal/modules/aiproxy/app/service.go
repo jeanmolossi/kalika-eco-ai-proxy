@@ -5,7 +5,9 @@ import (
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
 )
 
@@ -65,10 +67,10 @@ var (
 //
 // ===========================================================================
 
+type TokenCounter = tokenizer.TokenCounter
+
 // TokenLimiter is a narrow interface for rate limiting required by the service.
-type TokenLimiter interface {
-	Allow(ctx context.Context, tenantID, key string, tokens int) (bool, error)
-}
+type TokenLimiter = ratelimit.Limiter
 
 // SemanticCache is the minimal interface the service needs for semantic caching.
 type SemanticCache interface {
@@ -106,6 +108,7 @@ type Service struct {
 	router     ChatRouter
 	usagePub   UsagePublisher
 	auditPub   AuditPublisher
+	tokenizr   TokenCounter
 }
 
 // NewService creates a new Service instance.
@@ -116,6 +119,7 @@ func NewService(
 	rt ChatRouter,
 	usagePub UsagePublisher,
 	auditPub AuditPublisher,
+	tokenizr TokenCounter,
 ) *Service {
 	return &Service{
 		limiter:    limiter,
@@ -124,5 +128,6 @@ func NewService(
 		router:     rt,
 		usagePub:   usagePub,
 		auditPub:   auditPub,
+		tokenizr:   tokenizr,
 	}
 }

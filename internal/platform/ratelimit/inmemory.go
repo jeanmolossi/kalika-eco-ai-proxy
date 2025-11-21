@@ -3,6 +3,7 @@ package ratelimit
 import (
 	"context"
 	"errors"
+	"math"
 	"sync"
 	"time"
 
@@ -35,7 +36,10 @@ func newTokenBucket(now time.Time, maxTokens, tokensPerInterval float64, interva
 	}
 }
 
-func (b *tokenBucket) allow(now time.Time, requested int) bool {
+// allow processes the request and returns:
+//
+//	allowed, remaining, retryAfter, resetAfter.
+func (b *tokenBucket) allow(now time.Time, requested int) (bool, int, time.Duration, time.Duration) {
 	if requested <= 0 {
 		requested = 1
 	}
@@ -57,13 +61,41 @@ func (b *tokenBucket) allow(now time.Time, requested int) bool {
 		}
 	}
 
+	// When is not enough tokens, calc Retry-After
 	if b.tokens < float64(requested) {
-		return false
+		deficit := float64(requested) - b.tokens
+
+		var retryAfter time.Duration
+
+		if b.refillRate > 0 {
+			sec := deficit / b.refillRate
+			retryAfter = time.Duration(math.Ceil(sec)) * time.Second
+		}
+
+		// How much time until the bucket resets
+		var resetAfter time.Duration
+
+		if b.refillRate > 0 {
+			defFul := b.maxTokens - b.tokens
+			sec := defFul / b.refillRate
+			resetAfter = time.Duration(math.Ceil(sec)) * time.Second
+		}
+
+		return false, int(b.tokens), retryAfter, resetAfter
 	}
 
+	// consume tokens
 	b.tokens -= float64(requested)
 
-	return true
+	var resetAfter time.Duration
+
+	if b.refillRate > 0 {
+		defFul := b.maxTokens - b.tokens
+		sec := defFul / b.refillRate
+		resetAfter = time.Duration(math.Ceil(sec)) * time.Second
+	}
+
+	return true, int(b.tokens), 0, resetAfter
 }
 
 type localLimiter struct {
@@ -85,17 +117,17 @@ func newLocalLimiter(cfg config.RateLimit) *localLimiter {
 // Allow implements the Limiter interface for the local in-memory limiter.
 //
 // It uses a per-(tenantID,key) token bucket, which is safe for concurrent usage.
-func (l *localLimiter) Allow(ctx context.Context, tenantID, key string, tokens int) (bool, error) {
+func (l *localLimiter) Allow(ctx context.Context, tenantID, key string, tokens int) (Result, error) {
 	if ctx.Err() != nil {
-		return false, ctx.Err()
+		return Result{}, ctx.Err()
 	}
 
 	if tenantID == "" {
-		return false, errors.New("ratelimit: tenantID is required")
+		return Result{}, errors.New("ratelimit: tenantID is required")
 	}
 
 	if key == "" {
-		return false, errors.New("ratelimit: key is required")
+		return Result{}, errors.New("ratelimit: key is required")
 	}
 
 	now := l.now()
@@ -114,7 +146,14 @@ func (l *localLimiter) Allow(ctx context.Context, tenantID, key string, tokens i
 	))
 
 	bkt := val.(*tokenBucket)
-	allowed := bkt.allow(now, tokens)
 
-	return allowed, nil
+	allowed, remaining, retryAfter, resetAfter := bkt.allow(now, tokens)
+
+	return Result{
+		Allowed:    allowed,
+		Limit:      actualMax,
+		Remaining:  remaining,
+		RetryAfter: retryAfter,
+		ResetAfter: resetAfter,
+	}, nil
 }

@@ -3,7 +3,9 @@ package aiproxy
 import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
 )
 
 // DepsKey is the container key used to store AI proxy dependencies.
@@ -12,6 +14,8 @@ const DepsKey = "aiproxy:deps"
 // Deps groups all dependencies required by the AI proxy HTTP layer.
 type Deps struct {
 	TenantStore tenant.Store
+	Limiter     ratelimit.Limiter
+	Tokenizr    tokenizer.TokenCounter
 	Service     *app.Service
 }
 
@@ -39,6 +43,7 @@ func buildDependencies(c *core.Container) (Deps, error) {
 	usagePub := core.MustGet[app.UsagePublisher](c, core.UsagePublisherModule)
 	auditPub := core.MustGet[app.AuditPublisher](c, core.AuditPublisherModule)
 	router := core.MustGet[app.ChatRouter](c, core.RouterModule)
+	tokenizr := core.MustGet[app.TokenCounter](c, core.TokenizerModule)
 
 	svc := app.NewService(
 		limiter,
@@ -47,10 +52,13 @@ func buildDependencies(c *core.Container) (Deps, error) {
 		router,
 		usagePub,
 		auditPub,
+		tokenizr,
 	)
 
 	deps := Deps{
 		TenantStore: tenantStore,
+		Limiter:     limiter,
+		Tokenizr:    tokenizr,
 		Service:     svc,
 	}
 

@@ -8,16 +8,6 @@ import (
 
 // Embeddings handles an embeddings request for a given tenant.
 func (s *Service) Embeddings(ctx context.Context, in EmbeddingsInput) (EmbeddingsOutput, error) {
-	// Rate limit per tenant.
-	ok, err := s.limiter.Allow(ctx, in.Tenant.ID, "embeddings", 1)
-	if err != nil {
-		return EmbeddingsOutput{}, err
-	}
-
-	if !ok {
-		return EmbeddingsOutput{}, ErrRateLimited
-	}
-
 	req := in.Request
 	// No guardrails or cache for MVP embeddings; can be added later.
 

@@ -67,6 +67,8 @@ func (m *module) Routes(e *echo.Echo, c *core.Container) error {
 
 	handlers := http.NewHandlers(
 		deps.TenantStore,
+		deps.Limiter,
+		deps.Tokenizr,
 		deps.Service, // [app.ChatUseCase]
 		deps.Service, // [app.EmbeddingsUseCase]
 	)

@@ -3,6 +3,8 @@ package apperr
 import (
 	"errors"
 	"net/http"
+
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 )
 
 type Kind string
@@ -94,6 +96,22 @@ func Conflict(err error) *Error {
 }
 
 func TooManyRequests(err error) *Error {
+	var (
+		rateerr  *ratelimit.ErrRateLimited
+		metadata map[string]any
+	)
+
+	if errors.As(err, &rateerr) {
+		result := rateerr.Result()
+
+		metadata = map[string]any{
+			"limit":       result.Limit,
+			"remaining":   result.Remaining,
+			"reset":       result.ResetAfter.Seconds(),
+			"retry_after": result.RetryAfter.Seconds(),
+		}
+	}
+
 	return &Error{
 		kind:       KindTooManyReq,
 		httpStatus: http.StatusTooManyRequests, // 429
@@ -101,6 +119,7 @@ func TooManyRequests(err error) *Error {
 		detail:     "Wait before request again.",
 		code:       "too_many_requests",
 		cause:      err,
+		meta:       metadata,
 	}
 }
 
