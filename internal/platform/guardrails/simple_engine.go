@@ -2,7 +2,6 @@ package guardrails
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"regexp"
 	"slices"
@@ -68,7 +67,6 @@ func (e *simpleEngine) applyRules(
 	copy(rewritten, messages)
 
 	for _, rule := range rules {
-
 		switch rule.Kind {
 		case RuleKindRegexBlock:
 			hit, err := ruleMatchesRegex(rule, messages)
