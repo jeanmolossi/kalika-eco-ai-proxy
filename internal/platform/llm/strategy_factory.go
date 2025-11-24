@@ -2,6 +2,7 @@ package llm
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -21,12 +22,23 @@ func NewStrategyFactory(metrics MetricsRecorder) StrategyFactory {
 
 // Build constructs a Client using the given provider configuration.
 func (f StrategyFactory) Build(cfg ProviderSettings) (Client, error) {
-	strategy, err := NewLangChainStrategy(cfg)
+	strategy, err := f.strategyFor(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &StrategyClient{strategy: strategy, metrics: f.metrics}, nil
+}
+
+func (f StrategyFactory) strategyFor(cfg ProviderSettings) (ModelStrategy, error) {
+	switch detectProvider(cfg) {
+	case providerAnthropic:
+		return newAnthropicStrategy(cfg)
+	case providerOllama:
+		return newOllamaStrategy(cfg)
+	default:
+		return newOpenAIStrategy(cfg)
+	}
 }
 
 // StrategyClient decorates a ModelStrategy with metrics collection.
@@ -56,4 +68,26 @@ func (s *StrategyClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResp
 // Name returns the strategy name for debugging purposes.
 func (s *StrategyClient) Name() string {
 	return s.strategy.Name()
+}
+
+type providerKind string
+
+const (
+	providerOpenAI    providerKind = "openai"
+	providerAnthropic providerKind = "anthropic"
+	providerOllama    providerKind = "ollama"
+)
+
+func detectProvider(cfg ProviderSettings) providerKind {
+	name := strings.ToLower(cfg.Name)
+	base := strings.ToLower(cfg.BaseURL)
+
+	switch {
+	case strings.Contains(name, string(providerAnthropic)), strings.Contains(base, string(providerAnthropic)):
+		return providerAnthropic
+	case strings.Contains(name, string(providerOllama)), strings.Contains(base, string(providerOllama)):
+		return providerOllama
+	default:
+		return providerOpenAI
+	}
 }

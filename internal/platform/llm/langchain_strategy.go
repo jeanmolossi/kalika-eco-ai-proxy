@@ -8,6 +8,8 @@ import (
 
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/anthropic"
+	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
@@ -22,7 +24,7 @@ type ModelStrategy interface {
 // LangChainStrategy relies on langchain-go to speak with OpenAI-compatible models.
 type LangChainStrategy struct {
 	name             string
-	llm              *openai.LLM
+	llm              llms.Model
 	embedder         embeddings.Embedder
 	streamingEnabled bool
 	chatModels       map[string]struct{}
@@ -31,9 +33,13 @@ type LangChainStrategy struct {
 
 // NewLangChainStrategy builds a LangChain-backed strategy using provider settings.
 func NewLangChainStrategy(cfg ProviderSettings) (ModelStrategy, error) {
+	return newOpenAIStrategy(cfg)
+}
+
+func newOpenAIStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 	opts := []openai.Option{
 		openai.WithToken(cfg.APIKey),
-		openai.WithBaseURL(strings.TrimRight(cfg.BaseURL, "/")),
+		openai.WithBaseURL(trimURL(cfg.BaseURL)),
 	}
 
 	if len(cfg.ChatModels) > 0 {
@@ -46,12 +52,68 @@ func NewLangChainStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 
 	client, err := openai.New(opts...)
 	if err != nil {
-		return nil, fmt.Errorf("llm: unable to create langchain client: %w", err)
+		return nil, fmt.Errorf("llm: unable to create openai strategy: %w", err)
 	}
 
 	embedder, err := embeddings.NewEmbedder(embeddings.EmbedderClientFunc(client.CreateEmbedding))
 	if err != nil {
-		return nil, fmt.Errorf("llm: unable to create embedder: %w", err)
+		return nil, fmt.Errorf("llm: unable to create openai embedder: %w", err)
+	}
+
+	return &LangChainStrategy{
+		name:             cfg.Name,
+		llm:              client,
+		embedder:         embedder,
+		streamingEnabled: cfg.EnableStreaming,
+		chatModels:       toSet(cfg.ChatModels),
+		embedModels:      toSet(cfg.EmbedModels),
+	}, nil
+}
+
+func newAnthropicStrategy(cfg ProviderSettings) (ModelStrategy, error) {
+	opts := []anthropic.Option{anthropic.WithToken(cfg.APIKey)}
+
+	if trimmed := trimURL(cfg.BaseURL); trimmed != "" {
+		opts = append(opts, anthropic.WithBaseURL(trimmed))
+	}
+
+	if len(cfg.ChatModels) > 0 {
+		opts = append(opts, anthropic.WithModel(cfg.ChatModels[0]))
+	}
+
+	client, err := anthropic.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("llm: unable to create anthropic strategy: %w", err)
+	}
+
+	return &LangChainStrategy{
+		name:             cfg.Name,
+		llm:              client,
+		streamingEnabled: cfg.EnableStreaming,
+		chatModels:       toSet(cfg.ChatModels),
+		embedModels:      toSet(cfg.EmbedModels),
+	}, nil
+}
+
+func newOllamaStrategy(cfg ProviderSettings) (ModelStrategy, error) {
+	opts := []ollama.Option{ollama.WithServerURL(trimURL(cfg.BaseURL))}
+
+	if len(cfg.ChatModels) > 0 {
+		opts = append(opts, ollama.WithModel(cfg.ChatModels[0]))
+	}
+
+	if len(cfg.EmbedModels) > 0 {
+		opts = append(opts, ollama.WithModel(cfg.EmbedModels[0]))
+	}
+
+	client, err := ollama.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("llm: unable to create ollama strategy: %w", err)
+	}
+
+	embedder, err := embeddings.NewEmbedder(embeddings.EmbedderClientFunc(client.CreateEmbedding))
+	if err != nil {
+		return nil, fmt.Errorf("llm: unable to create ollama embedder: %w", err)
 	}
 
 	return &LangChainStrategy{
@@ -144,6 +206,10 @@ func (s *LangChainStrategy) Embed(ctx context.Context, req EmbedRequest) (EmbedR
 		return EmbedResponse{}, fmt.Errorf("llm: model %s not supported by strategy %s", req.Model, s.name)
 	}
 
+	if s.embedder == nil {
+		return EmbedResponse{}, errors.New("llm: embeddings not supported by provider")
+	}
+
 	vectors, err := s.embedder.EmbedDocuments(ctx, req.Input)
 	if err != nil {
 		return EmbedResponse{}, fmt.Errorf("llm: embed failed: %w", err)
@@ -153,7 +219,11 @@ func (s *LangChainStrategy) Embed(ctx context.Context, req EmbedRequest) (EmbedR
 }
 
 func (s *LangChainStrategy) buildCallOptions(req ChatRequest) []llms.CallOption {
-	opts := []llms.CallOption{llms.WithModel(req.Model)}
+	opts := []llms.CallOption{}
+
+	if req.Model != "" {
+		opts = append(opts, llms.WithModel(req.Model))
+	}
 
 	if req.MaxTokens > 0 {
 		opts = append(opts, llms.WithMaxTokens(req.MaxTokens))
@@ -210,4 +280,8 @@ func extractUsage(resp *llms.ContentResponse, key string) int {
 	default:
 		return 0
 	}
+}
+
+func trimURL(url string) string {
+	return strings.TrimRight(url, "/")
 }
