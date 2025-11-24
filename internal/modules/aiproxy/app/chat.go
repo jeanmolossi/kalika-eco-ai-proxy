@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
@@ -17,12 +18,25 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	req.Extras = in.Metadata
 	now := time.Now()
 
+	if tokens, err := s.tokenizr.CountChatTokens(req.Model, req.Messages); err == nil {
+		if res, err := s.limiter.Allow(ctx, in.Tenant.ID, "chat.completions", tokens); err != nil {
+			return ChatOutput{}, err
+		} else if !res.Allowed {
+			return ChatOutput{}, ErrRateLimited
+		}
+	}
+
+	requestID := httpx.RequestIDFromCtx(ctx)
+	if requestID == "" {
+		requestID = uuid.NewString()
+	}
+
 	gctx := guardrails.Context{
 		TenantID:      in.Tenant.ID,
 		APIKeyID:      in.APIKey,
 		Endpoint:      "chat.completions",
 		Model:         req.Model,
-		RequestID:     httpx.RequestIDFromCtx(ctx),
+		RequestID:     requestID,
 		UserID:        "",
 		OccurredAt:    now,
 		InputMessages: flattenChatMessages(req.Messages),
@@ -48,8 +62,9 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	// Optional semantic cache.
 	if in.Tenant.EnableSemanticCache {
 		if cached, ok, _ := s.cache.LookupChat(ctx, in.Tenant.ID, req); ok {
-			_ = s.publishUsage(ctx, in, *cached)
-			_ = s.publishAudit(ctx, in, req, *cached)
+			_ = s.publishUsage(ctx, requestID, in, *cached)
+			_ = s.publishAudit(ctx, requestID, in, req, *cached)
+
 			return *cached, nil
 		}
 	}
@@ -73,8 +88,8 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 		_ = s.cache.StoreChat(ctx, in.Tenant.ID, req, resp)
 	}
 
-	_ = s.publishUsage(ctx, in, resp)
-	_ = s.publishAudit(ctx, in, req, resp)
+	_ = s.publishUsage(ctx, requestID, in, resp)
+	_ = s.publishAudit(ctx, requestID, in, req, resp)
 
 	return resp, nil
 }

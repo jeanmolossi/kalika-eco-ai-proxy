@@ -10,6 +10,7 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/router"
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,8 +33,13 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 		return httpx.WriteProblem(c, apperr.BadRequest(errors.New("invalid body")))
 	}
 
+	model, err := router.ResolveChatModel(*tcfg, dto.Model)
+	if err != nil {
+		return httpx.WriteProblem(c, apperr.BadRequest(err))
+	}
+
 	req := llm.ChatRequest{
-		Model:       dto.Model,
+		Model:       model,
 		Messages:    dto.Messages,
 		MaxTokens:   dto.MaxTokens,
 		Temperature: dto.Temperature,
@@ -42,7 +48,7 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 		Extras:      dto.Metadata,
 	}
 
-	tokenCount, err := h.Tokenizr.CountChatTokens(dto.Model, dto.Messages)
+	tokenCount, err := h.Tokenizr.CountChatTokens(model, dto.Messages)
 	if err != nil {
 		return httpx.WriteProblem(c, err)
 	}

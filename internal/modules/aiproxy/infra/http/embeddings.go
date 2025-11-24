@@ -10,6 +10,7 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/router"
 	"github.com/labstack/echo/v4"
 )
 
@@ -37,12 +38,17 @@ func (h *Handlers) Embeddings(c echo.Context) error {
 		return httpx.WriteProblem(c, apperr.BadRequest(err))
 	}
 
+	model, err := router.ResolveEmbedModel(*tcfg, dto.Model)
+	if err != nil {
+		return httpx.WriteProblem(c, apperr.BadRequest(err))
+	}
+
 	req := llm.EmbedRequest{
-		Model: dto.Model,
+		Model: model,
 		Input: dto.Input,
 	}
 
-	tokenCount, err := h.Tokenizr.CountEmbeddingTokens(dto.Model, dto.Input)
+	tokenCount, err := h.Tokenizr.CountEmbeddingTokens(model, dto.Input)
 	if err != nil {
 		return httpx.WriteProblem(c, err)
 	}

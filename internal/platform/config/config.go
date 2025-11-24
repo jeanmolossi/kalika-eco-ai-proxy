@@ -16,8 +16,12 @@ type Config struct {
 
 	Log       Log        `envPrefix:"LOG_"`
 	Server    HTTPServer `envPrefix:"SERVER_"`
+	LLM       LLM        `envPrefix:"LLM_"`
 	PgDB      Postgres   `envPrefix:"POSTGRES_"`
 	RateLimit RateLimit  `envPrefix:"RATELIMIT_"`
+	Kafka     Kafka      `envPrefix:"KAFKA_"`
+	UsageSink UsageSink  `envPrefix:"USAGE_"`
+	AuditSink AuditSink  `envPrefix:"AUDIT_"`
 }
 
 var Load = sync.OnceValue(loadEnv)

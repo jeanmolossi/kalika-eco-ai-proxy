@@ -1,4 +1,4 @@
-.PHONY: help build run test fmt cert docker-dev docker-up docker-down migrate
+.PHONY: help build run test fmt cert docker-dev docker-up docker-down migrate kafka-topics-init
 
 GOPATH ?= $(which go)
 
@@ -40,3 +40,19 @@ docker-up-watch: ## Start docker compose services and watch core logs
 
 lint: ## Run golangci-lint fixing issues
 	@golangci-lint run --fix
+
+kafka-topics-init: ## Create required Kafka topics in the local cluster
+	@docker compose exec kafka sh -c '\
+	  kafka-topics --bootstrap-server localhost:9092 \
+	    --create --if-not-exists --topic ai-proxy.audit.events \
+	    --partitions 3 --replication-factor 1 \
+	    --config cleanup.policy=delete --config retention.ms=604800000 && \
+	  kafka-topics --bootstrap-server localhost:9092 \
+	    --create --if-not-exists --topic ai-proxy.usage.events \
+	    --partitions 3 --replication-factor 1 \
+	    --config cleanup.policy=compact,delete --config retention.ms=1209600000 && \
+	  kafka-topics --bootstrap-server localhost:9092 \
+	              --create --if-not-exists --topic ai-proxy.guardrails.verdicts \
+	              --partitions 1 --replication-factor 1 \
+	              --config cleanup.policy=delete --config retention.ms=1209600000 \
+'

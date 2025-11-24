@@ -42,7 +42,7 @@ type Config struct {
 
 func Start(cfg Config) func(ctx context.Context, e *echo.Echo) func(context.Context) error {
 	if cfg.AllowedOrigins == nil {
-		cfg.AllowedOrigins = []string{"*"}
+		cfg.AllowedOrigins = []string{}
 	}
 
 	allowedMethods := []string{

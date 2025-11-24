@@ -44,6 +44,7 @@ func Flush() error {
 	case io.WriteCloser:
 		err := w.Close()
 		out = nil
+
 		return err
 	default:
 		out = nil

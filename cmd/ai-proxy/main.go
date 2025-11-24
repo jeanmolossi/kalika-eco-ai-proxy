@@ -36,6 +36,7 @@ func main() {
 		TLSKeyFile:          cfg.Server.TLSKeyFile,
 		BasePath:            cfg.Server.BasePath,
 		ReadTimeout:         cfg.Server.ReadTimeout,
+		AllowedOrigins:      cfg.Server.AllowedOrigins,
 		ReadHeaderTimeout:   2 * time.Second,
 		WriteTimeout:        10 * time.Second,
 		IdleTimeout:         30 * time.Second,
