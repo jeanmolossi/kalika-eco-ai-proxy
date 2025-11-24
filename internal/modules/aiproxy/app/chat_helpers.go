@@ -27,6 +27,7 @@ func rebuildChatMessages(original []llm.ChatMessage, rewritten []string) []llm.C
 	}
 
 	out := make([]llm.ChatMessage, len(original))
+
 	for i, m := range original {
 		m.Content = rewritten[i]
 		out[i] = m

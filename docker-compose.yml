@@ -1,3 +1,6 @@
+include:
+  - path: ./.docker/kafka/docker-compose.yml
+
 services:
   postgres-master:
     container_name: ai-proxy-postgres-master

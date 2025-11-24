@@ -63,6 +63,7 @@ func (m *module) Routes(e *echo.Echo, c *core.Container) error {
 	log := c.Logger()
 	log.Info("aiproxy: registering routes")
 
+	conf := c.Config()
 	deps := MustDepsFromContainer(c)
 
 	handlers := http.NewHandlers(
@@ -73,7 +74,7 @@ func (m *module) Routes(e *echo.Echo, c *core.Container) error {
 		deps.Service, // [app.EmbeddingsUseCase]
 	)
 
-	http.RegisterRoutes(e, handlers)
+	http.RegisterRoutes(e, conf.Server.BasePath, handlers)
 
 	return nil
 }

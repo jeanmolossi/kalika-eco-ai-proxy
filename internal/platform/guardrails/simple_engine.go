@@ -160,6 +160,7 @@ func ruleRewriteRegex(rule Rule, msgs []string) ([]string, bool, error) {
 	hit := false
 
 	out := make([]string, len(msgs))
+
 	for i, m := range msgs {
 		if re.MatchString(m) {
 			hit = true
@@ -184,6 +185,7 @@ func trimToMaxLength(msgs []string, max int) []string {
 		if len(m) <= remaining {
 			out = append(out, m)
 			remaining -= len(m)
+
 			continue
 		}
 

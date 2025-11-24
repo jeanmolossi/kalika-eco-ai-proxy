@@ -14,7 +14,7 @@ var (
 
 type PolicyConfig struct {
 	ModelsAllowed []string        `json:"models_allowed,omitempty"`
-	Routing       json.RawMessage `json:"routing,omitempty"`
+	Routing       *RoutingConfig  `json:"routing,omitempty"`
 	Guardrails    json.RawMessage `json:"guardrails,omitempty"`
 }
 
@@ -39,4 +39,5 @@ type TenantConfig struct {
 type Store interface {
 	FindByAPIKey(ctx context.Context, apiKey string) (*TenantConfig, error)
 	FindByID(ctx context.Context, tenantID string) (*TenantConfig, error)
+	RevokeExpired(ctx context.Context) (int64, error)
 }

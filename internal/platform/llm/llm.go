@@ -13,6 +13,7 @@ type ChatRequest struct {
 	MaxTokens   int           `json:"max_tokens,omitempty"`
 	Temperature float32       `json:"temperature,omitempty"`
 	TopP        float32       `json:"top_p,omitempty"`
+	Stream      bool          `json:"stream,omitempty"`
 	// metadata internos
 	TenantID string            `json:"-"`
 	UserID   string            `json:"-"`
@@ -42,4 +43,7 @@ type Client interface {
 	Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error)
 }
 
-const RoleUser = "user"
+const (
+	RoleUser      = "user"
+	RoleAssistant = "assistant"
+)

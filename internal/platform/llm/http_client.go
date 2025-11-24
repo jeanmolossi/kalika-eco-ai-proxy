@@ -1,0 +1,316 @@
+package llm
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+)
+
+// ProviderSettings describes how to reach an upstream LLM provider.
+type ProviderSettings struct {
+	Name            string
+	BaseURL         string
+	APIKey          string
+	RequestTimeout  time.Duration
+	MaxRetries      int
+	EnableStreaming bool
+	ChatModels      []string
+	EmbedModels     []string
+}
+
+// HTTPClient calls an upstream OpenAI-compatible HTTP endpoint.
+// It supports basic retries and streaming via server-sent events.
+type HTTPClient struct {
+	baseURL         string
+	apiKey          string
+	client          *http.Client
+	metrics         MetricsRecorder
+	maxRetries      int
+	enableStreaming bool
+}
+
+// NewHTTPClient builds an HTTP-backed LLM client using the provided settings.
+func NewHTTPClient(settings ProviderSettings, metrics MetricsRecorder) (*HTTPClient, error) {
+	if settings.BaseURL == "" {
+		return nil, errors.New("llm: provider base url is required")
+	}
+
+	if metrics == nil {
+		metrics = NoopMetrics{}
+	}
+
+	timeout := settings.RequestTimeout
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+
+	retries := settings.MaxRetries
+	if retries < 0 {
+		retries = 0
+	}
+
+	return &HTTPClient{
+		baseURL:         strings.TrimRight(settings.BaseURL, "/"),
+		apiKey:          settings.APIKey,
+		client:          &http.Client{Timeout: timeout},
+		metrics:         metrics,
+		maxRetries:      retries,
+		enableStreaming: settings.EnableStreaming,
+	}, nil
+}
+
+// Chat sends a chat completion request to the provider.
+func (c *HTTPClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	start := time.Now()
+	resp, err := c.doRequest(ctx, http.MethodPost, c.baseURL+"/chat/completions", chatPayload(req))
+	latency := time.Since(start)
+
+	defer func() {
+		c.metrics.ObserveChat(req.Model, latency, err)
+	}()
+
+	if err != nil {
+		return ChatResponse{}, err
+	}
+
+	if req.Stream {
+		return c.consumeStream(resp)
+	}
+
+	return parseChatResponse(resp)
+}
+
+// Embed sends an embeddings request to the provider.
+func (c *HTTPClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
+	start := time.Now()
+	resp, err := c.doRequest(ctx, http.MethodPost, c.baseURL+"/embeddings", embedPayload(req))
+	latency := time.Since(start)
+
+	defer func() {
+		c.metrics.ObserveEmbed(req.Model, latency, err)
+	}()
+
+	if err != nil {
+		return EmbedResponse{}, err
+	}
+
+	return parseEmbedResponse(resp)
+}
+
+func (c *HTTPClient) doRequest(ctx context.Context, method, url string, body any) (*http.Response, error) {
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	retries := c.maxRetries + 1
+
+	var resp *http.Response
+	for attempt := 0; attempt < retries; attempt++ {
+		resp, err = c.singleRequest(ctx, method, url, payload)
+		if err == nil && resp.StatusCode < 500 {
+			return resp, nil
+		}
+
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+			time.Sleep(time.Duration(attempt+1) * 150 * time.Millisecond)
+			continue
+		}
+
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}
+
+	return resp, err
+}
+
+func (c *HTTPClient) singleRequest(ctx context.Context, method, url string, payload []byte) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if c.apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= http.StatusBadRequest && resp.StatusCode < http.StatusInternalServerError {
+		defer resp.Body.Close()
+		return nil, fmt.Errorf("llm: upstream %d", resp.StatusCode)
+	}
+
+	return resp, nil
+}
+
+func chatPayload(req ChatRequest) map[string]any {
+	return map[string]any{
+		"model":       req.Model,
+		"messages":    req.Messages,
+		"max_tokens":  req.MaxTokens,
+		"temperature": req.Temperature,
+		"top_p":       req.TopP,
+		"stream":      req.Stream,
+		"metadata":    req.Extras,
+	}
+}
+
+func embedPayload(req EmbedRequest) map[string]any {
+	return map[string]any{
+		"model": req.Model,
+		"input": req.Input,
+	}
+}
+
+type choice struct {
+	Message chatDelta `json:"message"`
+}
+
+type chatDelta struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type usageBlock struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+}
+
+type chatEnvelope struct {
+	ID      string     `json:"id"`
+	Model   string     `json:"model"`
+	Choices []choice   `json:"choices"`
+	Usage   usageBlock `json:"usage"`
+}
+
+type streamDelta struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type streamChoice struct {
+	Delta streamDelta `json:"delta"`
+}
+
+type streamEnvelope struct {
+	ID      string         `json:"id"`
+	Model   string         `json:"model"`
+	Choices []streamChoice `json:"choices"`
+}
+
+func parseChatResponse(resp *http.Response) (ChatResponse, error) {
+	defer resp.Body.Close()
+
+	var envelope chatEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return ChatResponse{}, err
+	}
+
+	if len(envelope.Choices) == 0 {
+		return ChatResponse{}, errors.New("llm: empty choices")
+	}
+
+	assistant := envelope.Choices[0].Message
+	messages := []ChatMessage{assistantAsMessage(assistant)}
+
+	return ChatResponse{
+		ID:        envelope.ID,
+		Model:     envelope.Model,
+		Messages:  messages,
+		PromptTok: envelope.Usage.PromptTokens,
+		CompTok:   envelope.Usage.CompletionTokens,
+	}, nil
+}
+
+func (c *HTTPClient) consumeStream(resp *http.Response) (ChatResponse, error) {
+	defer resp.Body.Close()
+
+	if !c.enableStreaming {
+		return ChatResponse{}, errors.New("llm: streaming disabled")
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 1024), 1<<20)
+
+	var (
+		buffer    strings.Builder
+		model, id string
+	)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || !strings.HasPrefix(line, "data:") {
+			continue
+		}
+
+		payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if payload == "[DONE]" {
+			break
+		}
+
+		var chunk streamEnvelope
+		if err := json.Unmarshal([]byte(payload), &chunk); err != nil {
+			return ChatResponse{}, err
+		}
+
+		if len(chunk.Choices) > 0 {
+			buffer.WriteString(chunk.Choices[0].Delta.Content)
+		}
+
+		model = chunk.Model
+		id = chunk.ID
+	}
+
+	if err := scanner.Err(); err != nil {
+		return ChatResponse{}, err
+	}
+
+	message := ChatMessage{Role: RoleAssistant, Content: buffer.String()}
+
+	return ChatResponse{ID: id, Model: model, Messages: []ChatMessage{message}}, nil
+}
+
+type embedEnvelope struct {
+	Data []struct {
+		Embedding []float32 `json:"embedding"`
+	} `json:"data"`
+	Model string `json:"model"`
+}
+
+func parseEmbedResponse(resp *http.Response) (EmbedResponse, error) {
+	defer resp.Body.Close()
+
+	var envelope embedEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return EmbedResponse{}, err
+	}
+
+	embs := make([][]float32, len(envelope.Data))
+	for i, d := range envelope.Data {
+		embs[i] = d.Embedding
+	}
+
+	return EmbedResponse{Model: envelope.Model, Embeddings: embs}, nil
+}
+
+func assistantAsMessage(d chatDelta) ChatMessage {
+	role := d.Role
+	if role == "" {
+		role = RoleAssistant
+	}
+
+	return ChatMessage{Role: role, Content: d.Content}
+}

@@ -22,6 +22,9 @@ func (p *postgresStore) FindByAPIKey(ctx context.Context, apiKey string) (*Tenan
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
 	sum := sha256.Sum256([]byte(strings.TrimSpace(strings.TrimPrefix(apiKey, "Bearer "))))
 	secretHash := sum[:]
 
@@ -102,7 +105,7 @@ func (p *postgresStore) FindByAPIKey(ctx context.Context, apiKey string) (*Tenan
 // FindByID implements Store.
 func (p *postgresStore) FindByID(ctx context.Context, tenantID string) (*TenantConfig, error) {
 	const query = `
-        SELECT
+SELECT
             t.id,
             t.code,
             t.name,
@@ -170,6 +173,20 @@ func (p *postgresStore) FindByID(ctx context.Context, tenantID string) (*TenantC
 	}
 
 	return &cfg, nil
+}
+
+// RevokeExpired marks expired API keys as inactive to reduce attack surface.
+func (p *postgresStore) RevokeExpired(ctx context.Context) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	cmd, err := p.db.Exec(ctx, `UPDATE apx.tenant_api_keys SET status = 'inactive', updated_at = now()
+WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at <= now()`)
+	if err != nil {
+		return 0, err
+	}
+
+	return cmd.RowsAffected(), nil
 }
 
 func extractPrefix(apiKey string) (string, error) {
