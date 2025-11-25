@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms"
@@ -25,10 +27,12 @@ type ModelStrategy interface {
 type LangChainStrategy struct {
 	name             string
 	llm              llms.Model
-	embedder         embeddings.Embedder
+	embedderFactory  func(model string) (embeddings.Embedder, error)
 	streamingEnabled bool
 	chatModels       map[string]struct{}
 	embedModels      map[string]struct{}
+	requestTimeout   time.Duration
+	maxRetries       int
 }
 
 // NewLangChainStrategy builds a LangChain-backed strategy using provider settings.
@@ -37,17 +41,19 @@ func NewLangChainStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 }
 
 func newOpenAIStrategy(cfg ProviderSettings) (ModelStrategy, error) {
+	timeout := normalizeTimeout(cfg.RequestTimeout)
+	retries := normalizeRetries(cfg.MaxRetries)
+
+	httpClient := &http.Client{Timeout: timeout}
+
 	opts := []openai.Option{
 		openai.WithToken(cfg.APIKey),
 		openai.WithBaseURL(trimURL(cfg.BaseURL)),
+		openai.WithHTTPClient(httpClient),
 	}
 
 	if len(cfg.ChatModels) > 0 {
 		opts = append(opts, openai.WithModel(cfg.ChatModels[0]))
-	}
-
-	if len(cfg.EmbedModels) > 0 {
-		opts = append(opts, openai.WithEmbeddingModel(cfg.EmbedModels[0]))
 	}
 
 	client, err := openai.New(opts...)
@@ -55,23 +61,47 @@ func newOpenAIStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 		return nil, fmt.Errorf("llm: unable to create openai strategy: %w", err)
 	}
 
-	embedder, err := embeddings.NewEmbedder(embeddings.EmbedderClientFunc(client.CreateEmbedding))
-	if err != nil {
-		return nil, fmt.Errorf("llm: unable to create openai embedder: %w", err)
-	}
-
 	return &LangChainStrategy{
-		name:             cfg.Name,
-		llm:              client,
-		embedder:         embedder,
+		name: cfg.Name,
+		llm:  client,
+		embedderFactory: func(model string) (embeddings.Embedder, error) {
+			selectedModel := model
+			if selectedModel == "" && len(cfg.EmbedModels) > 0 {
+				selectedModel = cfg.EmbedModels[0]
+			}
+
+			embedOpts := []openai.Option{
+				openai.WithToken(cfg.APIKey),
+				openai.WithBaseURL(trimURL(cfg.BaseURL)),
+				openai.WithHTTPClient(httpClient),
+			}
+
+			if selectedModel != "" {
+				embedOpts = append(embedOpts, openai.WithEmbeddingModel(selectedModel))
+			}
+
+			embedClient, err := openai.New(embedOpts...)
+			if err != nil {
+				return nil, fmt.Errorf("llm: unable to create openai embedder: %w", err)
+			}
+
+			return embeddings.NewEmbedder(embeddings.EmbedderClientFunc(embedClient.CreateEmbedding))
+		},
 		streamingEnabled: cfg.EnableStreaming,
 		chatModels:       toSet(cfg.ChatModels),
 		embedModels:      toSet(cfg.EmbedModels),
+		requestTimeout:   timeout,
+		maxRetries:       retries,
 	}, nil
 }
 
 func newAnthropicStrategy(cfg ProviderSettings) (ModelStrategy, error) {
-	opts := []anthropic.Option{anthropic.WithToken(cfg.APIKey)}
+	timeout := normalizeTimeout(cfg.RequestTimeout)
+	retries := normalizeRetries(cfg.MaxRetries)
+
+	httpClient := &http.Client{Timeout: timeout}
+
+	opts := []anthropic.Option{anthropic.WithToken(cfg.APIKey), anthropic.WithHTTPClient(httpClient)}
 
 	if trimmed := trimURL(cfg.BaseURL); trimmed != "" {
 		opts = append(opts, anthropic.WithBaseURL(trimmed))
@@ -92,18 +122,21 @@ func newAnthropicStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 		streamingEnabled: cfg.EnableStreaming,
 		chatModels:       toSet(cfg.ChatModels),
 		embedModels:      toSet(cfg.EmbedModels),
+		requestTimeout:   timeout,
+		maxRetries:       retries,
 	}, nil
 }
 
 func newOllamaStrategy(cfg ProviderSettings) (ModelStrategy, error) {
-	opts := []ollama.Option{ollama.WithServerURL(trimURL(cfg.BaseURL))}
+	timeout := normalizeTimeout(cfg.RequestTimeout)
+	retries := normalizeRetries(cfg.MaxRetries)
+
+	httpClient := &http.Client{Timeout: timeout}
+
+	opts := []ollama.Option{ollama.WithServerURL(trimURL(cfg.BaseURL)), ollama.WithHTTPClient(httpClient)}
 
 	if len(cfg.ChatModels) > 0 {
 		opts = append(opts, ollama.WithModel(cfg.ChatModels[0]))
-	}
-
-	if len(cfg.EmbedModels) > 0 {
-		opts = append(opts, ollama.WithModel(cfg.EmbedModels[0]))
 	}
 
 	client, err := ollama.New(opts...)
@@ -111,18 +144,33 @@ func newOllamaStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 		return nil, fmt.Errorf("llm: unable to create ollama strategy: %w", err)
 	}
 
-	embedder, err := embeddings.NewEmbedder(embeddings.EmbedderClientFunc(client.CreateEmbedding))
-	if err != nil {
-		return nil, fmt.Errorf("llm: unable to create ollama embedder: %w", err)
-	}
-
 	return &LangChainStrategy{
-		name:             cfg.Name,
-		llm:              client,
-		embedder:         embedder,
+		name: cfg.Name,
+		llm:  client,
+		embedderFactory: func(model string) (embeddings.Embedder, error) {
+			selectedModel := model
+			if selectedModel == "" && len(cfg.EmbedModels) > 0 {
+				selectedModel = cfg.EmbedModels[0]
+			}
+
+			embedOpts := []ollama.Option{ollama.WithServerURL(trimURL(cfg.BaseURL)), ollama.WithHTTPClient(httpClient)}
+
+			if selectedModel != "" {
+				embedOpts = append(embedOpts, ollama.WithModel(selectedModel))
+			}
+
+			embedClient, err := ollama.New(embedOpts...)
+			if err != nil {
+				return nil, fmt.Errorf("llm: unable to create ollama embedder: %w", err)
+			}
+
+			return embeddings.NewEmbedder(embeddings.EmbedderClientFunc(embedClient.CreateEmbedding))
+		},
 		streamingEnabled: cfg.EnableStreaming,
 		chatModels:       toSet(cfg.ChatModels),
 		embedModels:      toSet(cfg.EmbedModels),
+		requestTimeout:   timeout,
+		maxRetries:       retries,
 	}, nil
 }
 
@@ -176,7 +224,18 @@ func (s *LangChainStrategy) Chat(ctx context.Context, req ChatRequest) (ChatResp
 		}))
 	}
 
-	resp, err := s.llm.GenerateContent(ctx, messages, opts...)
+	var resp *llms.ContentResponse
+
+	err := s.callWithRetry(ctx, func(callCtx context.Context) error {
+		r, err := s.llm.GenerateContent(callCtx, messages, opts...)
+		if err != nil {
+			return err
+		}
+
+		resp = r
+
+		return nil
+	})
 	if err != nil {
 		return ChatResponse{}, fmt.Errorf("llm: chat failed: %w", err)
 	}
@@ -206,11 +265,21 @@ func (s *LangChainStrategy) Embed(ctx context.Context, req EmbedRequest) (EmbedR
 		return EmbedResponse{}, fmt.Errorf("llm: model %s not supported by strategy %s", req.Model, s.name)
 	}
 
-	if s.embedder == nil {
+	if s.embedderFactory == nil {
 		return EmbedResponse{}, errors.New("llm: embeddings not supported by provider")
 	}
 
-	vectors, err := s.embedder.EmbedDocuments(ctx, req.Input)
+	embedder, err := s.embedderFactory(req.Model)
+	if err != nil {
+		return EmbedResponse{}, err
+	}
+
+	var vectors [][]float32
+
+	err = s.callWithRetry(ctx, func(callCtx context.Context) error {
+		vectors, err = embedder.EmbedDocuments(callCtx, req.Input)
+		return err
+	})
 	if err != nil {
 		return EmbedResponse{}, fmt.Errorf("llm: embed failed: %w", err)
 	}
@@ -238,6 +307,34 @@ func (s *LangChainStrategy) buildCallOptions(req ChatRequest) []llms.CallOption 
 	}
 
 	return opts
+}
+
+func (s *LangChainStrategy) callWithRetry(ctx context.Context, fn func(ctx context.Context) error) error {
+	retries := s.maxRetries + 1
+
+	var err error
+
+	for attempt := 0; attempt < retries; attempt++ {
+		callCtx, cancel := context.WithTimeout(ctx, s.requestTimeout)
+
+		err = fn(callCtx)
+
+		cancel()
+
+		if err == nil {
+			return nil
+		}
+
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
+
+		if attempt < retries-1 {
+			time.Sleep(time.Duration(attempt+1) * 150 * time.Millisecond)
+		}
+	}
+
+	return err
 }
 
 func roleToLangChain(role string) llms.ChatMessageType {
@@ -284,4 +381,20 @@ func extractUsage(resp *llms.ContentResponse, key string) int {
 
 func trimURL(url string) string {
 	return strings.TrimRight(url, "/")
+}
+
+func normalizeTimeout(timeout time.Duration) time.Duration {
+	if timeout <= 0 {
+		return 30 * time.Second
+	}
+
+	return timeout
+}
+
+func normalizeRetries(retries int) int {
+	if retries < 0 {
+		return 0
+	}
+
+	return retries
 }
