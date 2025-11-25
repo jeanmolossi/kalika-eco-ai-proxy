@@ -59,11 +59,10 @@ func (m *module) Migrations(ctx context.Context, c *core.Container) ([]core.Migr
 
 // Routes registers HTTP routes handled by this module.
 // It wires the AI proxy HTTP endpoints to Echo using the previously built dependencies.
-func (m *module) Routes(e *echo.Echo, c *core.Container) error {
+func (m *module) Routes(g *echo.Group, c *core.Container) error {
 	log := c.Logger()
 	log.Info("aiproxy: registering routes")
 
-	conf := c.Config()
 	deps := MustDepsFromContainer(c)
 
 	handlers := http.NewHandlers(
@@ -74,7 +73,7 @@ func (m *module) Routes(e *echo.Echo, c *core.Container) error {
 		deps.Service, // [app.EmbeddingsUseCase]
 	)
 
-	http.RegisterRoutes(e, conf.Server.BasePath, handlers)
+	http.RegisterRoutes(g, handlers)
 
 	return nil
 }

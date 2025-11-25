@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -44,6 +45,8 @@ func Start(cfg Config) func(ctx context.Context, e *echo.Echo) func(context.Cont
 	if cfg.AllowedOrigins == nil {
 		cfg.AllowedOrigins = []string{}
 	}
+
+	cfg.BasePath = config.NormalizeBasePath(cfg.BasePath)
 
 	allowedMethods := []string{
 		http.MethodGet,
@@ -104,7 +107,8 @@ func Start(cfg Config) func(ctx context.Context, e *echo.Echo) func(context.Cont
 
 		e.Use(middlewares...)
 
-		registerInfraRoutes(e, cfg)
+		baseGroup := e.Group(cfg.BasePath)
+		registerInfraRoutes(baseGroup, cfg)
 
 		// BasePath (versioning or gateway-fiendly)
 		root := http.NewServeMux()
@@ -191,12 +195,12 @@ func Start(cfg Config) func(ctx context.Context, e *echo.Echo) func(context.Cont
 	}
 }
 
-func registerInfraRoutes(e *echo.Echo, cfg Config) {
-	e.GET(cfg.BasePath+"/healthz", func(c echo.Context) error {
+func registerInfraRoutes(g *echo.Group, cfg Config) {
+	g.GET("/healthz", func(c echo.Context) error {
 		return c.String(http.StatusOK, "ok")
 	})
 
 	if cfg.EnablePprof {
-		e.Any(cfg.BasePath+"/debug/pprof/*", echo.WrapHandler(http.DefaultServeMux))
+		g.Any("/debug/pprof/*", echo.WrapHandler(http.DefaultServeMux))
 	}
 }

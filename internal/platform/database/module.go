@@ -44,7 +44,7 @@ func (m *module) Provide(ctx context.Context, c *core.Container) error {
 }
 
 // Routes implements core.Module.
-func (m *module) Routes(e *echo.Echo, c *core.Container) error { return nil }
+func (m *module) Routes(g *echo.Group, c *core.Container) error { return nil }
 
 // Start implements core.Module.
 func (m *module) Start(ctx context.Context, c *core.Container) (stop func(context.Context) error, err error) {

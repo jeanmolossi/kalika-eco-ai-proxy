@@ -34,6 +34,8 @@ func loadEnv() *Config {
 		panic(err)
 	}
 
+	c.Server.Normalize()
+
 	return &c
 }
 
