@@ -16,6 +16,7 @@ import (
 type ProviderPool struct {
 	defaultProvider ProviderSettings
 	metrics         MetricsRecorder
+	factory         StrategyFactory
 
 	mu       sync.RWMutex
 	clients  map[string]Client
@@ -31,6 +32,7 @@ func NewProviderPool(defaults ProviderSettings, metrics MetricsRecorder) *Provid
 	return &ProviderPool{
 		defaultProvider: defaults,
 		metrics:         metrics,
+		factory:         NewStrategyFactory(metrics),
 		clients:         make(map[string]Client),
 		override:        make(map[string][]ProviderSettings),
 	}
@@ -99,7 +101,7 @@ func (p *ProviderPool) clientForConfig(cfg ProviderSettings) (Client, error) {
 		return client, nil
 	}
 
-	client, err := NewHTTPClient(cfg, p.metrics)
+	client, err := p.factory.Build(cfg)
 	if err != nil {
 		return nil, err
 	}
