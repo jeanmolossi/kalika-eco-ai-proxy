@@ -11,18 +11,28 @@ import (
 type simpleEngine struct {
 	repo   RuleRepository
 	logger *slog.Logger
+	sink   DecisionSink
 }
 
-func NewSimpleEngine(repo RuleRepository, logger *slog.Logger) Engine {
+func NewSimpleEngine(repo RuleRepository, logger *slog.Logger, sink DecisionSink) Engine {
 	if logger == nil {
 		logger = slog.Default()
+	}
+
+	if sink == nil {
+		sink = &noopSink{}
 	}
 
 	return &simpleEngine{
 		repo:   repo,
 		logger: logger.With("component", "guardrails.simpleEngine"),
+		sink:   sink,
 	}
 }
+
+type noopSink struct{}
+
+func (n *noopSink) RecordDecision(ctx context.Context, gx Context, phase Phase, dec Decision) {}
 
 func (e *simpleEngine) EvaluateInput(ctx context.Context, gx Context) (Decision, error) {
 	rules, err := e.repo.ListRulesForTenantPhase(ctx, gx.TenantID, PhaseInput)
@@ -58,8 +68,10 @@ func (e *simpleEngine) applyRules(
 		Metadata: map[string]any{},
 	}
 
+	phase := PhaseInput
 	messages := gx.InputMessages
 	if !isInput {
+		phase = PhaseOutput
 		messages = gx.OutputMessages
 	}
 
@@ -138,6 +150,8 @@ func (e *simpleEngine) applyRules(
 			decision.RewrittenOutputMessages = rewritten
 		}
 	}
+
+	e.sink.RecordDecision(ctx, gx, phase, decision)
 
 	return decision, nil
 }

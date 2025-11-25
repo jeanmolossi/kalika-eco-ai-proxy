@@ -49,6 +49,38 @@ type Decision struct {
 	Metadata map[string]any
 }
 
+type DecisionEvent struct {
+	// Identidade básica
+	TenantID   string    `json:"tenant_id"`
+	APIKeyID   string    `json:"api_key_id,omitempty"`
+	UserID     string    `json:"user_id,omitempty"`
+	RequestID  string    `json:"request_id"`
+	Endpoint   string    `json:"endpoint"` // ex: "chat.completions", "embeddings"
+	Model      string    `json:"model,omitempty"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Decisão
+	Phase    Phase  `json:"phase"`  // input/output
+	Action   Action `json:"action"` // allow/block/rewrite
+	Reason   string `json:"reason"` // ex: "blocked_by_regex", "trimmed_by_max_length"
+	Severity string `json:"severity,omitempty"`
+
+	// Regras que dispararam
+	RuleIDs []string `json:"rule_ids,omitempty"`
+	Tags    []string `json:"tags,omitempty"` // agregadas das regras
+
+	// Dados “meta”, mas sem payload sensível
+	InputSizeBytes  int `json:"input_size_bytes,omitempty"`
+	OutputSizeBytes int `json:"output_size_bytes,omitempty"`
+	InputMsgCount   int `json:"input_msg_count,omitempty"`
+	OutputMsgCount  int `json:"output_msg_count,omitempty"`
+
+	// Flags úteis pra BI
+	TenantPlan  string `json:"tenant_plan,omitempty"` // core/pro/enterprise
+	Environment string `json:"environment,omitempty"` // prod/stage/dev
+	Direction   string `json:"direction,omitempty"`   // "request" (input) / "response" (output)
+}
+
 // Engine é o que o app vai usar
 type Engine interface {
 	EvaluateInput(ctx context.Context, gx Context) (Decision, error)
@@ -86,4 +118,8 @@ type Rule struct {
 
 type RuleRepository interface {
 	ListRulesForTenantPhase(ctx context.Context, tenantID string, phase Phase) ([]Rule, error)
+}
+
+type DecisionSink interface {
+	RecordDecision(ctx context.Context, gx Context, phase Phase, dec Decision)
 }
