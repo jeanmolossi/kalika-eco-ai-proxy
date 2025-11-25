@@ -70,6 +70,7 @@ func (e *simpleEngine) applyRules(
 
 	phase := PhaseInput
 	messages := gx.InputMessages
+
 	if !isInput {
 		phase = PhaseOutput
 		messages = gx.OutputMessages

@@ -123,10 +123,15 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 	}
 
 	// 7) Routes
+	basePath := config.NormalizeBasePath(opt.Config.Server.BasePath)
+	opt.Config.Server.BasePath = basePath
+
+	baseGroup := a.E.Group(basePath)
+
 	for _, m := range mods {
 		a.L.Info("registering routes", slog.String("module", m.Name()))
 
-		if err := m.Routes(a.E, a.C); err != nil {
+		if err := m.Routes(baseGroup, a.C); err != nil {
 			return fmt.Errorf("core.App: routes failed for module %s: %w", m.Name(), err)
 		}
 	}

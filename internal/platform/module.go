@@ -174,7 +174,7 @@ func resolveSinkPath(path, fallback string) string {
 }
 
 // Routes implements core.Module.
-func (m *module) Routes(e *echo.Echo, c *core.Container) error {
+func (m *module) Routes(g *echo.Group, c *core.Container) error {
 	return nil
 }
 

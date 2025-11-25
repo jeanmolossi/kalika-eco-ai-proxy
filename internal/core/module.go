@@ -24,8 +24,8 @@ type Module interface {
 	Provide(ctx context.Context, c *Container) error
 
 	// Routes registers the HTTP routes of the module.
-	// There is no need to start the server here, just register in e.
-	Routes(e *echo.Echo, c *Container) error
+	// There is no need to start the server here, just register in the provided group.
+	Routes(g *echo.Group, c *Container) error
 
 	// Start initiates background routines, consumers, etc.
 	// Returns a stop function for graceful shutdown.
