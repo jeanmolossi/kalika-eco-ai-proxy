@@ -7,10 +7,11 @@ Este guia apresenta rapidamente o que o produto faz, como o código está organi
 - **Pipelines de chat/embeddings**: cada requisição passa por rate limiting por tokens, cache semântico opcional, guarda-corpos, roteamento para o modelo solicitado e publicação de eventos de uso/auditoria para observabilidade e billing.
 
 ## Estrutura do código
-- `apps/gateway/main.go`: ponto de entrada. Carrega configuração, inicializa logger, registra módulos (banco, plataforma, gateway), configura timeouts do servidor HTTP e executa bootstrap e shutdown gracioso.
+- `apps/gateway/main.go`: ponto de entrada. Carrega configuração, inicializa logger, registra módulos (banco, tenant, guardrails, rate limit/cache, LLM/router/tokenizer, observabilidade, gateway), configura timeouts do servidor HTTP e executa bootstrap e shutdown gracioso.
 - `internal/core/`: abstrações centrais de lifecycle e DI. `App` orquestra registro de dependências, migrações, rotas HTTP e parada ordenada dos módulos. `Registry` resolve e ordena módulos por peso.
 - `internal/gateway/`: módulo de domínio que implementa chat e embeddings. O `Service` coordena limitador de tokens, cache, guarda-corpos, roteador de modelos e publicação de eventos de uso/auditoria por inquilino.
-- `internal/platform/`: utilitários compartilhados (config, HTTP, logger, roteador de modelos, guardrails, rate limiting, tenants, tokenizer, auditoria, usage events). A maioria das dependências usadas pelo módulo de AI Proxy vive aqui.
+- `internal/{tenant,guardrails,ratelimit,cache,llm,observability}/`: módulos especializados que expõem o store de tenants, guardrails, limitador/token cache, pool de LLMs+roteador+tokenizer e publishers de observabilidade. Cada um usa contratos de `pkg/*` e implementações em `internal/platform/*` como anti-corruption layer.
+- `internal/platform/*`: implementações concretas de domínio (tenant store Postgres, guardrails engine, roteador simples, tokenizers, publishers) consumidas pelos módulos acima.
 - `docs/`: guias de bootstrap, roadmap de tarefas e notas de revisão de segurança; este arquivo complementa com visão geral e estilo de código.
 
 ## Como começar a mexer

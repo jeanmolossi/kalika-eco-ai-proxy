@@ -3,10 +3,15 @@ package runtime
 import (
 	"time"
 
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/cache"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/llm"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/ratelimit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
@@ -15,7 +20,12 @@ import (
 func Registry() core.Registry {
 	return core.NewRegistry(
 		database.NewModule(),
-		platform.NewModule(),
+		tenant.NewModule(),
+		guardrails.NewModule(),
+		ratelimit.NewModule(),
+		cache.NewModule(),
+		llm.NewModule(),
+		observability.NewModule(),
 		gateway.NewModule(),
 	)
 }

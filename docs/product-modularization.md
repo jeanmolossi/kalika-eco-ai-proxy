@@ -1,7 +1,7 @@
 # Estratégia de Modularização do Proxy de IA
 
 ## Visão de Produto
-O proxy de IA atual concentra responsabilidades operacionais no módulo `platform`, o que dificulta a evolução de cada capability de forma independente. A estratégia abaixo organiza o domínio em bounded contexts e define quais pacotes de `internal/platform` podem ser extraídos como serviços autônomos, preservando contratos explícitos e interoperabilidade.
+Historicamente, o proxy de IA concentrou responsabilidades operacionais no módulo `platform`, o que dificultava a evolução de cada capability de forma independente. A estratégia abaixo organiza o domínio em bounded contexts, mantém implementações em `internal/platform/*` como anti-corruption layer e separa a orquestração em módulos dedicados para facilitar a extração futura como serviços autônomos.
 
 ## Inventário dos pacotes em `internal/platform`
 - **tenant**: gerencia stores e políticas de tenants, chave de autenticação e revogação agendada.
@@ -48,8 +48,9 @@ O proxy de IA atual concentra responsabilidades operacionais no módulo `platfor
 - Infraestrutura compartilhada de configuração, logging, servidor HTTP e erros de aplicação realocada para `pkg/toolkit` para que serviços satélites possam reutilizar contratos estáveis.
 - O executável do gateway passou a viver em `apps/gateway` e o módulo de domínio em `internal/gateway`, refletindo a topologia orientada a serviços descrita na visão de diretórios.
 - Eventos de uso e auditoria, além da precificação por token, foram consolidados em `pkg/observability`, permitindo que o gateway publique métricas e custos via contrato público antes da extração do serviço de billing.
+- O runtime agora registra módulos separados para tenant, guardrails, rate limiting/cache, LLM/router/tokenizer e observability, substituindo o antigo `internal/platform/module.go` e aproximando o layout da futura divisão em serviços.
 
 ## Critérios de pronto
 - Cada bounded context possui contrato versionado (OpenAPI/gRPC) e SDK em `pkg`.
-- `internal/platform/module.go` usa apenas clients externos para Tenant, Guardrails e Observability, mantendo gateway fino.
+- O runtime do gateway depende apenas de módulos com contratos finos (`pkg/*`), aptos a serem substituídos por clients externos sem alterar rotas HTTP ou casos de uso.
 - Telemetria e custos são calculados fora do processo principal, com IDs de rastreamento propagados de ponta a ponta.
