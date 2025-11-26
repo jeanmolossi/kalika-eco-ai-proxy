@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
+	observability "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/observability"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
 
@@ -36,13 +36,13 @@ func (s *Service) Embeddings(ctx context.Context, in EmbeddingsInput) (Embedding
 		return EmbeddingsOutput{}, err
 	}
 
-	_ = s.usagePub.Publish(ctx, usage.Event{
+	_ = s.usagePub.Publish(ctx, observability.UsageEvent{
 		TenantID:         in.Tenant.ID,
 		UserID:           in.UserID,
 		Model:            resp.Model,
 		PromptTokens:     promptTokens,
 		CompletionTokens: 0,
-		CostUSD:          usage.CalculateUSD(resp.Model, promptTokens, 0),
+		CostUSD:          observability.CalculateUSD(resp.Model, promptTokens, 0),
 		RequestID:        requestID,
 	})
 

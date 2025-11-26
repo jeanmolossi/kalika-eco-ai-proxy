@@ -3,11 +3,10 @@ package app
 import (
 	"context"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
 	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
 	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
+	observability "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/observability"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"
 )
@@ -94,12 +93,12 @@ type ChatRouter interface {
 
 // UsagePublisher is the minimal usage event publisher.
 type UsagePublisher interface {
-	Publish(ctx context.Context, ev usage.Event) error
+	Publish(ctx context.Context, ev observability.UsageEvent) error
 }
 
 // AuditPublisher is the minimal audit event publisher.
 type AuditPublisher interface {
-	Publish(ctx context.Context, ev audit.Event) error
+	Publish(ctx context.Context, ev observability.AuditEvent) error
 }
 
 // Service orchestrates the AI proxy flow using small, segregated interfaces.

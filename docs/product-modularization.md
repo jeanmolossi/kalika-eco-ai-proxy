@@ -47,6 +47,7 @@ O proxy de IA atual concentra responsabilidades operacionais no módulo `platfor
 - Rotas HTTP, casos de uso e roteadores internos já consomem os contratos de `pkg/*`, preparando o código para substituição gradual por clients externos.
 - Infraestrutura compartilhada de configuração, logging, servidor HTTP e erros de aplicação realocada para `pkg/toolkit` para que serviços satélites possam reutilizar contratos estáveis.
 - O executável do gateway passou a viver em `apps/gateway` e o módulo de domínio em `internal/gateway`, refletindo a topologia orientada a serviços descrita na visão de diretórios.
+- Eventos de uso e auditoria, além da precificação por token, foram consolidados em `pkg/observability`, permitindo que o gateway publique métricas e custos via contrato público antes da extração do serviço de billing.
 
 ## Critérios de pronto
 - Cada bounded context possui contrato versionado (OpenAPI/gRPC) e SDK em `pkg`.

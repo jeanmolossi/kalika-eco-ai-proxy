@@ -5,11 +5,10 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
 	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
 	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
+	observability "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/observability"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
@@ -139,19 +138,19 @@ func (f *fakeRouter) RouteEmbed(context.Context, pkgtenant.TenantConfig, pkgllm.
 }
 
 type captureUsage struct {
-	events []usage.Event
+	events []observability.UsageEvent
 }
 
-func (c *captureUsage) Publish(_ context.Context, ev usage.Event) error {
+func (c *captureUsage) Publish(_ context.Context, ev observability.UsageEvent) error {
 	c.events = append(c.events, ev)
 	return nil
 }
 
 type captureAudit struct {
-	events []audit.Event
+	events []observability.AuditEvent
 }
 
-func (c *captureAudit) Publish(_ context.Context, ev audit.Event) error {
+func (c *captureAudit) Publish(_ context.Context, ev observability.AuditEvent) error {
 	c.events = append(c.events, ev)
 	return nil
 }

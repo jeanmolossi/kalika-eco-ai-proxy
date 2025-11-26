@@ -3,16 +3,15 @@ package app
 import (
 	"context"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
 	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
+	observability "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/observability"
 )
 
 // publishUsage sends a usage event based on the LLM response.
 func (s *Service) publishUsage(ctx context.Context, requestID string, in ChatInput, resp pkgllm.ChatResponse) error {
-	cost := usage.CalculateUSD(resp.Model, resp.PromptTok, resp.CompTok)
+	cost := observability.CalculateUSD(resp.Model, resp.PromptTok, resp.CompTok)
 
-	return s.usagePub.Publish(ctx, usage.Event{
+	return s.usagePub.Publish(ctx, observability.UsageEvent{
 		TenantID:         in.Tenant.ID,
 		UserID:           in.UserID,
 		Model:            resp.Model,
@@ -31,7 +30,7 @@ func (s *Service) publishAudit(
 	req pkgllm.ChatRequest,
 	resp pkgllm.ChatResponse,
 ) error {
-	return s.auditPub.Publish(ctx, audit.Event{
+	return s.auditPub.Publish(ctx, observability.AuditEvent{
 		TenantID:  in.Tenant.ID,
 		UserID:    in.UserID,
 		RequestID: requestID,
