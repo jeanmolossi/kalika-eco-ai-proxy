@@ -22,7 +22,7 @@ Siga este guia para subir o projeto rapidamente em um ambiente local de desenvol
 3. **Rodar a aplicação localmente**
    ```bash
    make build
-   ./bin/jobs
+  ./bin/gateway
    ```
    ou, para desenvolvimento com Docker Compose:
    ```bash

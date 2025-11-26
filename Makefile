@@ -7,7 +7,7 @@ help: ## Show this help message
 		| awk 'BEGIN {FS=":.*?## "} {printf "\t\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 build: ## Build the Go binary
-	@go build -o bin/jobs cmd/ai-proxy/main.go
+        @go build -o bin/gateway apps/gateway/main.go
 
 test: ## Run all tests
 	@go test ./... -cover

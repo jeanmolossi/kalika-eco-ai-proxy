@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/router"
 	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/apperr"

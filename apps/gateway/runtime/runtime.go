@@ -1,34 +1,28 @@
-package main
+package runtime
 
 import (
-	"context"
-	"log/slog"
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
-	toolkitlogger "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/logger"
 )
 
-func main() {
-	ctx := context.Background()
-	cfg := toolkitconfig.Load()
-	log := toolkitlogger.New()
-	app := core.NewApp(log)
-
-	defer toolkitlogger.Flush()
-
-	registry := core.NewRegistry(
+// Registry wires the modules required to run the gateway executable.
+func Registry() core.Registry {
+	return core.NewRegistry(
 		database.NewModule(),
 		platform.NewModule(),
-		aiproxy.NewModule(),
+		gateway.NewModule(),
 	)
+}
 
-	app.StartServer = httpx.Start(httpx.Config{
+// HTTPServerConfig builds the HTTP server configuration from the shared config.
+func HTTPServerConfig(cfg *toolkitconfig.Config) httpx.Config {
+	return httpx.Config{
 		Host:                cfg.Server.Host,
 		Port:                cfg.Server.Port,
 		EnableTLS:           cfg.Server.EnableTLS,
@@ -42,14 +36,5 @@ func main() {
 		IdleTimeout:         30 * time.Second,
 		ShutdownTimeout:     15 * time.Second,
 		MaxRequestBodyBytes: 1 << 20, // 1MiB
-	})
-
-	err := app.Start(ctx, core.StartOptions{
-		Registry: registry,
-		Config:   cfg,
-	})
-	if err != nil {
-		log.ErrorContext(ctx, "failed", slog.Any("error", err))
-		return
 	}
 }

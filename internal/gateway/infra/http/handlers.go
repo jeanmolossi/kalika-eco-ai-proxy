@@ -3,7 +3,7 @@ package http
 import (
 	"strings"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"

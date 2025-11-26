@@ -1,15 +1,15 @@
-package aiproxy
+package gateway
 
 import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"
 )
 
 // DepsKey is the container key used to store AI proxy dependencies.
-const DepsKey = "aiproxy:deps"
+const DepsKey = "gateway:deps"
 
 // Deps groups all dependencies required by the AI proxy HTTP layer.
 type Deps struct {
@@ -25,7 +25,7 @@ func MustDepsFromContainer(c *core.Container) Deps {
 
 	deps, ok := v.(Deps)
 	if !ok {
-		panic("aiproxy: invalid deps type stored in container")
+		panic("gateway: invalid deps type stored in container")
 	}
 
 	return deps

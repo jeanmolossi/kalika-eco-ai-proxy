@@ -41,7 +41,7 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 		OccurredAt:    now,
 		InputMessages: flattenChatMessages(req.Messages),
 		Tags: map[string]string{
-			"source": "aiproxy.chat",
+			"source": "gateway.chat",
 		},
 	}
 
