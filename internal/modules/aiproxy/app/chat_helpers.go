@@ -1,8 +1,8 @@
 package app
 
-import "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+import pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 
-func flattenChatMessages(msgs []llm.ChatMessage) []string {
+func flattenChatMessages(msgs []pkgllm.ChatMessage) []string {
 	out := make([]string, 0, len(msgs))
 
 	for _, msg := range msgs {
@@ -12,13 +12,13 @@ func flattenChatMessages(msgs []llm.ChatMessage) []string {
 	return out
 }
 
-func rebuildChatMessages(original []llm.ChatMessage, rewritten []string) []llm.ChatMessage {
+func rebuildChatMessages(original []pkgllm.ChatMessage, rewritten []string) []pkgllm.ChatMessage {
 	if len(original) != len(rewritten) {
 		// em caso de divergencia, faz um fallback seguro
-		out := make([]llm.ChatMessage, len(rewritten))
+		out := make([]pkgllm.ChatMessage, len(rewritten))
 		for i, c := range rewritten {
-			out[i] = llm.ChatMessage{
-				Role:    llm.RoleUser,
+			out[i] = pkgllm.ChatMessage{
+				Role:    pkgllm.RoleUser,
 				Content: c,
 			}
 		}
@@ -26,7 +26,7 @@ func rebuildChatMessages(original []llm.ChatMessage, rewritten []string) []llm.C
 		return out
 	}
 
-	out := make([]llm.ChatMessage, len(original))
+	out := make([]pkgllm.ChatMessage, len(original))
 
 	for i, m := range original {
 		m.Content = rewritten[i]

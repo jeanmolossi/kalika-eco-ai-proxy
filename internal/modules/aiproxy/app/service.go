@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
+	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
+	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
+	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
+	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"
 )
 
 // ===========================================================================
@@ -20,26 +20,26 @@ import (
 
 // ChatInput represents the high-level input for a chat completion call.
 type ChatInput struct {
-	Tenant   tenant.TenantConfig
+	Tenant   pkgtenant.TenantConfig
 	APIKey   string
 	UserID   string
 	Metadata map[string]string
-	Request  llm.ChatRequest
+	Request  pkgllm.ChatRequest
 }
 
 // ChatOutput is a type alias for the low-level LLM chat response.
-type ChatOutput = llm.ChatResponse
+type ChatOutput = pkgllm.ChatResponse
 
 // EmbeddingsInput represents the input for an embeddings request.
 type EmbeddingsInput struct {
-	Tenant   tenant.TenantConfig
+	Tenant   pkgtenant.TenantConfig
 	UserID   string
 	Metadata map[string]string
-	Request  llm.EmbedRequest
+	Request  pkgllm.EmbedRequest
 }
 
 // EmbeddingsOutput is a type alias for the embeddings response.
-type EmbeddingsOutput = llm.EmbedResponse
+type EmbeddingsOutput = pkgllm.EmbedResponse
 
 // ===========================================================================
 //
@@ -69,27 +69,27 @@ var (
 //
 // ===========================================================================
 
-type TokenCounter = tokenizer.TokenCounter
+type TokenCounter = pkgtokenizer.TokenCounter
 
 // TokenLimiter is a narrow interface for rate limiting required by the service.
 type TokenLimiter = ratelimit.Limiter
 
 // SemanticCache is the minimal interface the service needs for semantic caching.
 type SemanticCache interface {
-	LookupChat(ctx context.Context, tenantID string, req llm.ChatRequest) (*llm.ChatResponse, bool, error)
-	StoreChat(ctx context.Context, tenantID string, req llm.ChatRequest, resp llm.ChatResponse) error
+	LookupChat(ctx context.Context, tenantID string, req pkgllm.ChatRequest) (*pkgllm.ChatResponse, bool, error)
+	StoreChat(ctx context.Context, tenantID string, req pkgllm.ChatRequest, resp pkgllm.ChatResponse) error
 }
 
 // ChatGuardrails represents the subset of guardrails features used by the chat flow.
 type ChatGuardrails interface {
-	EvaluateInput(ctx context.Context, gx guardrails.Context) (guardrails.Decision, error)
-	EvaluateOutput(ctx context.Context, gx guardrails.Context) (guardrails.Decision, error)
+	EvaluateInput(ctx context.Context, gx pkgguardrails.Context) (pkgguardrails.Decision, error)
+	EvaluateOutput(ctx context.Context, gx pkgguardrails.Context) (pkgguardrails.Decision, error)
 }
 
 // ChatRouter is the routing interface for chat and embeddings.
 type ChatRouter interface {
-	RouteChat(ctx context.Context, t tenant.TenantConfig, req llm.ChatRequest) (llm.ChatResponse, error)
-	RouteEmbed(ctx context.Context, t tenant.TenantConfig, req llm.EmbedRequest) (llm.EmbedResponse, error)
+	RouteChat(ctx context.Context, t pkgtenant.TenantConfig, req pkgllm.ChatRequest) (pkgllm.ChatResponse, error)
+	RouteEmbed(ctx context.Context, t pkgtenant.TenantConfig, req pkgllm.EmbedRequest) (pkgllm.EmbedResponse, error)
 }
 
 // UsagePublisher is the minimal usage event publisher.

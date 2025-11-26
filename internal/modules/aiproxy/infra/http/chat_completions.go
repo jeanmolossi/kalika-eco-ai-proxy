@@ -9,8 +9,8 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/router"
+	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 	"github.com/labstack/echo/v4"
 )
 
@@ -38,7 +38,7 @@ func (h *Handlers) ChatCompletions(c echo.Context) error {
 		return httpx.WriteProblem(c, apperr.BadRequest(err))
 	}
 
-	req := llm.ChatRequest{
+	req := pkgllm.ChatRequest{
 		Model:       model,
 		Messages:    dto.Messages,
 		MaxTokens:   dto.MaxTokens,

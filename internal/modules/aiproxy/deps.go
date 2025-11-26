@@ -4,8 +4,8 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
+	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
+	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"
 )
 
 // DepsKey is the container key used to store AI proxy dependencies.
@@ -13,9 +13,9 @@ const DepsKey = "aiproxy:deps"
 
 // Deps groups all dependencies required by the AI proxy HTTP layer.
 type Deps struct {
-	TenantStore tenant.Store
+	TenantStore pkgtenant.Store
 	Limiter     ratelimit.Limiter
-	Tokenizr    tokenizer.TokenCounter
+	Tokenizr    pkgtokenizer.TokenCounter
 	Service     *app.Service
 }
 
@@ -36,7 +36,7 @@ func MustDepsFromContainer(c *core.Container) Deps {
 func buildDependencies(c *core.Container) (Deps, error) {
 	// For the MVP, create very simple noop/stub implementations.
 	// You can later replace these with real DB/Redis/Kafka/etc. integrations.
-	tenantStore := core.MustGet[tenant.Store](c, core.TenantStoreModule)
+	tenantStore := core.MustGet[pkgtenant.Store](c, core.TenantStoreModule)
 	limiter := core.MustGet[app.TokenLimiter](c, core.RateLimiterModule)
 	semCache := core.MustGet[app.SemanticCache](c, core.SemanticCacheModule)
 	guard := core.MustGet[app.ChatGuardrails](c, core.GuardrailsModule)

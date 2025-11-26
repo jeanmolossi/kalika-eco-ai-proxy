@@ -3,10 +3,10 @@ package cache
 import (
 	"context"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 )
 
 type SemanticCache interface {
-	LookupChat(ctx context.Context, tenantID string, req llm.ChatRequest) (*llm.ChatResponse, bool, error)
-	StoreChat(ctx context.Context, tenantID string, req llm.ChatRequest, resp llm.ChatResponse) error
+	LookupChat(ctx context.Context, tenantID string, req pkgllm.ChatRequest) (*pkgllm.ChatResponse, bool, error)
+	StoreChat(ctx context.Context, tenantID string, req pkgllm.ChatRequest, resp pkgllm.ChatResponse) error
 }

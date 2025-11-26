@@ -3,7 +3,7 @@ package cache
 import (
 	"context"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 )
 
 // NoopSemanticCache is a semantic cache implementation that never hits
@@ -17,11 +17,11 @@ func NewNoopSemanticCache() *NoopSemanticCache {
 }
 
 // LookupChat always returns (nil, false, nil), meaning "no cached value".
-func (c *NoopSemanticCache) LookupChat(ctx context.Context, tenantID string, req llm.ChatRequest) (*llm.ChatResponse, bool, error) {
+func (c *NoopSemanticCache) LookupChat(ctx context.Context, tenantID string, req pkgllm.ChatRequest) (*pkgllm.ChatResponse, bool, error) {
 	return nil, false, nil
 }
 
 // StoreChat is a no-op and ignores all values.
-func (c *NoopSemanticCache) StoreChat(ctx context.Context, tenantID string, req llm.ChatRequest, resp llm.ChatResponse) error {
+func (c *NoopSemanticCache) StoreChat(ctx context.Context, tenantID string, req pkgllm.ChatRequest, resp pkgllm.ChatResponse) error {
 	return nil
 }

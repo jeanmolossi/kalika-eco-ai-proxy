@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
+	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
 )
 
 // Chat handles a full chat completion flow for a given tenant.
@@ -31,7 +31,7 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 		requestID = uuid.NewString()
 	}
 
-	gctx := guardrails.Context{
+	gctx := pkgguardrails.Context{
 		TenantID:      in.Tenant.ID,
 		APIKeyID:      in.APIKey,
 		Endpoint:      "chat.completions",
@@ -52,9 +52,9 @@ func (s *Service) Chat(ctx context.Context, in ChatInput) (ChatOutput, error) {
 	}
 
 	switch decision.Action {
-	case guardrails.ActionBlock:
+	case pkgguardrails.ActionBlock:
 		return ChatOutput{}, apperr.BadRequest(errors.New(decision.Reason))
-	case guardrails.ActionRewrite:
+	case pkgguardrails.ActionRewrite:
 		req.Messages = rebuildChatMessages(req.Messages, decision.RewrittenInputMessages)
 	default:
 	}

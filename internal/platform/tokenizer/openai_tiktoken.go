@@ -3,7 +3,7 @@ package tokenizer
 import (
 	"fmt"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
+	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 	"github.com/pkoukk/tiktoken-go"
 )
 
@@ -37,7 +37,7 @@ func (c *OpenAITikTokenCounter) resolveModel(model string) string {
 }
 
 // CountChatTokens counts the tokens for a chat completion request using tiktoken.
-func (c *OpenAITikTokenCounter) CountChatTokens(model string, messages []llm.ChatMessage) (int, error) {
+func (c *OpenAITikTokenCounter) CountChatTokens(model string, messages []pkgllm.ChatMessage) (int, error) {
 	model = c.resolveModel(model)
 
 	enc, err := tiktoken.EncodingForModel(model)

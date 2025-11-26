@@ -1,0 +1,52 @@
+# Estratégia de Modularização do Proxy de IA
+
+## Visão de Produto
+O proxy de IA atual concentra responsabilidades operacionais no módulo `platform`, o que dificulta a evolução de cada capability de forma independente. A estratégia abaixo organiza o domínio em bounded contexts e define quais pacotes de `internal/platform` podem ser extraídos como serviços autônomos, preservando contratos explícitos e interoperabilidade.
+
+## Inventário dos pacotes em `internal/platform`
+- **tenant**: gerencia stores e políticas de tenants, chave de autenticação e revogação agendada.
+- **guardrails**: validação e saneamento de prompts/respostas, com potencial para políticas específicas por domínio.
+- **llm**: abstrai provedores, pool e métricas de chamadas de modelos; já opera com aliases e defaults configuráveis.
+- **router**: decide qual provedor/modelo atenderá cada requisição, acoplado hoje ao pool local de providers.
+- **tokenizer**: contagem de tokens por modelo (hoje centralizada em OpenAI/TikToken) e suporte a aliases.
+- **usage** e **audit**: publishers para eventos de uso e auditoria (arquivo ou Kafka), hoje configurados no módulo `platform`.
+- **cache** e **ratelimit**: fornecem semântica de cache/no-op e rate limiting local.
+- **httpx**, **logger**, **config**, **database**, **apperr**: infra transversal que permanece como toolkit compartilhado.
+
+## Bounded contexts propostos (DDD)
+1. **Tenant & Identity**: cadastro, chaves, políticas de modelo e limites por tenant. Expõe API de gerenciamento e eventos de ciclo de vida (criação, revogação, alteração de planos).
+2. **Guardrails**: políticas de moderação e transformação de prompts/respostas, configuráveis por tenant. Deve consumir eventos de configuração ou consultar o serviço de Tenant.
+3. **LLM Gateway**: roteamento e orquestração de chamadas LLM, abstraindo provedores e modelos. Depende de contratos de Tenant (allowlists, defaults) e de Guardrails (políticas pré/pós chamada).
+4. **Observability & Billing**: coleta de métricas de uso, auditoria e custos por tenant. Consome eventos do Gateway e do Tenant.
+5. **Developer Experience** (SDK/CLI): pacotes auxiliares (`httpx`, `logger`, clients) que atuam como anti-corruption layer para consumo dos serviços.
+
+## Backlog de modularização
+1. **Isolar contratos de Tenant**
+   - Extrair interfaces de store e políticas para `pkg/tenant` com eventos de domínio (TenantCreated, ApiKeyRevoked).
+   - Expor API/cliente separado consumido pelo Gateway e Guardrails.
+2. **Separar Guardrails como serviço**
+   - Definir contrato síncrono (gRPC/HTTP) para validação e pós-processamento de prompts/respostas.
+   - Criar fila/eventos para atualizações de políticas e conectar com Tenant (permissões por tenant/modelo).
+3. **Formalizar o LLM Gateway**
+   - Manter apenas roteamento e retries no módulo principal; mover providers e pool para `pkg/llm` com contrato público.
+   - Introduzir Anti-Corruption Layer para provedores externos e mecanismo de feature flags por tenant.
+4. **Observability & Billing**
+   - Substituir publishers de `usage` e `audit` por um serviço próprio que recebe eventos do Gateway.
+   - Padronizar esquema de eventos (request/response IDs, custos, tokens, modelo) e backends pluggable (Kafka, HTTP).
+5. **Tokenizer e custos**
+   - Transformar `tokenizer` em serviço/biblioteca compartilhada com catálogo de modelos/tokenizers, versionado.
+   - Expor API para contagem e cálculo de custo unitário por modelo, consumida por Observability.
+6. **Infra compartilhada**
+   - Consolidar `config`, `logger`, `httpx` e `apperr` como toolkit comum para serviços satélites, com guidelines de logging e tracing.
+7. **Migration roadmap**
+   - Iniciar com extração de contratos e clients (`pkg/*`), depois mover implementação para serviços externos mantendo compatibilidade.
+   - Introduzir pact tests/contratos entre Gateway ↔ Tenant/Guardrails/Observability para garantir evolução independente.
+
+## Progresso inicial (refatoração corrente)
+- Contratos de domínio re-exportados em `pkg/{tenant,guardrails,llm,tokenizer}` para que módulos e futuros serviços dependam de caminhos estáveis sem acoplar-se às implementações de `internal/platform`.
+- Rotas HTTP, casos de uso e roteadores internos já consomem os contratos de `pkg/*`, preparando o código para substituição gradual por clients externos.
+
+## Critérios de pronto
+- Cada bounded context possui contrato versionado (OpenAPI/gRPC) e SDK em `pkg`.
+- `internal/platform/module.go` usa apenas clients externos para Tenant, Guardrails e Observability, mantendo gateway fino.
+- Telemetria e custos são calculados fora do processo principal, com IDs de rastreamento propagados de ponta a ponta.

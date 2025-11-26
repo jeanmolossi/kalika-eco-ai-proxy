@@ -5,23 +5,23 @@ import (
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy/app"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
+	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
+	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"
 )
 
 type Handlers struct {
-	Tenants  tenant.Store
+	Tenants  pkgtenant.Store
 	Limiter  ratelimit.Limiter
-	Tokenizr tokenizer.TokenCounter
+	Tokenizr pkgtokenizer.TokenCounter
 
 	ChatUseCase       app.ChatUseCase
 	EmbeddingsUseCase app.EmbeddingsUseCase
 }
 
 func NewHandlers(
-	tenants tenant.Store,
+	tenants pkgtenant.Store,
 	limiter ratelimit.Limiter,
-	tokenizr tokenizer.TokenCounter,
+	tokenizr pkgtokenizer.TokenCounter,
 	chat app.ChatUseCase,
 	embeddings app.EmbeddingsUseCase,
 ) *Handlers {

@@ -6,21 +6,21 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
+	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
+	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
+	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 )
 
 func TestChatRateLimitAndGuardrails(t *testing.T) {
 	ctx := httpx.SetRequestID(context.Background(), "rid-test")
 	guard := &fakeGuardrails{}
 	limiter := &fakeLimiter{result: ratelimit.Result{Allowed: false}}
-	rt := &fakeRouter{chatResp: llm.ChatResponse{
+	rt := &fakeRouter{chatResp: pkgllm.ChatResponse{
 		Model:     "gpt-4o",
-		Messages:  []llm.ChatMessage{{Role: llm.RoleAssistant, Content: "ok"}},
+		Messages:  []pkgllm.ChatMessage{{Role: pkgllm.RoleAssistant, Content: "ok"}},
 		PromptTok: 2,
 		CompTok:   1,
 	}}
@@ -31,20 +31,20 @@ func TestChatRateLimitAndGuardrails(t *testing.T) {
 	svc := NewService(limiter, nil, guard, rt, up, ap, tok)
 
 	_, err := svc.Chat(ctx, ChatInput{
-		Tenant:  tenant.TenantConfig{ID: "t1", ParsedPolicyConfig: &tenant.PolicyConfig{ModelsAllowed: []string{"gpt-4o"}}},
-		Request: llm.ChatRequest{Model: "gpt-4o", Messages: []llm.ChatMessage{{Role: llm.RoleUser, Content: "hi"}}},
+		Tenant:  pkgtenant.TenantConfig{ID: "t1", ParsedPolicyConfig: &pkgtenant.PolicyConfig{ModelsAllowed: []string{"gpt-4o"}}},
+		Request: pkgllm.ChatRequest{Model: "gpt-4o", Messages: []pkgllm.ChatMessage{{Role: pkgllm.RoleUser, Content: "hi"}}},
 	})
 	if err == nil {
 		t.Fatalf("expected rate limit error")
 	}
 
 	limiter.result = ratelimit.Result{Allowed: true}
-	guard.inputDecision = guardrails.Decision{Action: guardrails.ActionAllow}
-	guard.outputDecision = guardrails.Decision{Action: guardrails.ActionAllow}
+	guard.inputDecision = pkgguardrails.Decision{Action: pkgguardrails.ActionAllow}
+	guard.outputDecision = pkgguardrails.Decision{Action: pkgguardrails.ActionAllow}
 
 	resp, err := svc.Chat(ctx, ChatInput{
-		Tenant:  tenant.TenantConfig{ID: "t1", ParsedPolicyConfig: &tenant.PolicyConfig{ModelsAllowed: []string{"gpt-4o"}}},
-		Request: llm.ChatRequest{Model: "gpt-4o", Messages: []llm.ChatMessage{{Role: llm.RoleUser, Content: "hi"}}},
+		Tenant:  pkgtenant.TenantConfig{ID: "t1", ParsedPolicyConfig: &pkgtenant.PolicyConfig{ModelsAllowed: []string{"gpt-4o"}}},
+		Request: pkgllm.ChatRequest{Model: "gpt-4o", Messages: []pkgllm.ChatMessage{{Role: pkgllm.RoleUser, Content: "hi"}}},
 	})
 	if err != nil {
 		t.Fatalf("chat should succeed: %v", err)
@@ -70,15 +70,15 @@ func TestChatRateLimitAndGuardrails(t *testing.T) {
 func TestEmbeddingsRateLimit(t *testing.T) {
 	ctx := context.Background()
 	limiter := &fakeLimiter{result: ratelimit.Result{Allowed: true}}
-	rt := &fakeRouter{embedResp: llm.EmbedResponse{Model: "emb-1", Embeddings: [][]float32{{1, 2, 3}}}}
+	rt := &fakeRouter{embedResp: pkgllm.EmbedResponse{Model: "emb-1", Embeddings: [][]float32{{1, 2, 3}}}}
 	up := &captureUsage{}
 	ap := &captureAudit{}
 	tok := &fixedTokenizer{embTokens: 4}
 	svc := NewService(limiter, nil, &fakeGuardrails{}, rt, up, ap, tok)
 
 	_, err := svc.Embeddings(ctx, EmbeddingsInput{
-		Tenant:  tenant.TenantConfig{ID: "t1"},
-		Request: llm.EmbedRequest{Model: "emb-1", Input: []string{"txt"}},
+		Tenant:  pkgtenant.TenantConfig{ID: "t1"},
+		Request: pkgllm.EmbedRequest{Model: "emb-1", Input: []string{"txt"}},
 	})
 	if err != nil {
 		t.Fatalf("embeddings failed: %v", err)
@@ -91,8 +91,8 @@ func TestEmbeddingsRateLimit(t *testing.T) {
 	limiter.result = ratelimit.Result{Allowed: false}
 
 	_, err = svc.Embeddings(ctx, EmbeddingsInput{
-		Tenant:  tenant.TenantConfig{ID: "t1"},
-		Request: llm.EmbedRequest{Model: "emb-1", Input: []string{"txt"}},
+		Tenant:  pkgtenant.TenantConfig{ID: "t1"},
+		Request: pkgllm.EmbedRequest{Model: "emb-1", Input: []string{"txt"}},
 	})
 	if err == nil {
 		t.Fatalf("expected rate limit on embeddings")
@@ -109,24 +109,24 @@ func (f *fakeLimiter) Allow(context.Context, string, string, int) (ratelimit.Res
 }
 
 type fakeGuardrails struct {
-	inputDecision  guardrails.Decision
-	outputDecision guardrails.Decision
+	inputDecision  pkgguardrails.Decision
+	outputDecision pkgguardrails.Decision
 }
 
-func (f *fakeGuardrails) EvaluateInput(context.Context, guardrails.Context) (guardrails.Decision, error) {
+func (f *fakeGuardrails) EvaluateInput(context.Context, pkgguardrails.Context) (pkgguardrails.Decision, error) {
 	return f.inputDecision, nil
 }
 
-func (f *fakeGuardrails) EvaluateOutput(context.Context, guardrails.Context) (guardrails.Decision, error) {
+func (f *fakeGuardrails) EvaluateOutput(context.Context, pkgguardrails.Context) (pkgguardrails.Decision, error) {
 	return f.outputDecision, nil
 }
 
 type fakeRouter struct {
-	chatResp  llm.ChatResponse
-	embedResp llm.EmbedResponse
+	chatResp  pkgllm.ChatResponse
+	embedResp pkgllm.EmbedResponse
 }
 
-func (f *fakeRouter) RouteChat(context.Context, tenant.TenantConfig, llm.ChatRequest) (llm.ChatResponse, error) {
+func (f *fakeRouter) RouteChat(context.Context, pkgtenant.TenantConfig, pkgllm.ChatRequest) (pkgllm.ChatResponse, error) {
 	if f.chatResp.ID == "" {
 		f.chatResp.ID = uuid.NewString()
 	}
@@ -134,7 +134,7 @@ func (f *fakeRouter) RouteChat(context.Context, tenant.TenantConfig, llm.ChatReq
 	return f.chatResp, nil
 }
 
-func (f *fakeRouter) RouteEmbed(context.Context, tenant.TenantConfig, llm.EmbedRequest) (llm.EmbedResponse, error) {
+func (f *fakeRouter) RouteEmbed(context.Context, pkgtenant.TenantConfig, pkgllm.EmbedRequest) (pkgllm.EmbedResponse, error) {
 	return f.embedResp, nil
 }
 
@@ -160,6 +160,6 @@ type fixedTokenizer struct {
 	embTokens int
 }
 
-func (fixedTokenizer) CountChatTokens(string, []llm.ChatMessage) (int, error) { return 2, nil }
+func (fixedTokenizer) CountChatTokens(string, []pkgllm.ChatMessage) (int, error) { return 2, nil }
 
 func (f *fixedTokenizer) CountEmbeddingTokens(string, []string) (int, error) { return f.embTokens, nil }

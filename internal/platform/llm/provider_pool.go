@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
+	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 )
 
 // ProviderPool resolves the correct upstream client for a tenant/model pair.
@@ -39,7 +39,7 @@ func NewProviderPool(defaults ProviderSettings, metrics MetricsRecorder) *Provid
 }
 
 // ClientFor returns an LLM client that supports the given model for the tenant.
-func (p *ProviderPool) ClientFor(ctx context.Context, t tenant.TenantConfig, model string) (Client, error) {
+func (p *ProviderPool) ClientFor(ctx context.Context, t pkgtenant.TenantConfig, model string) (Client, error) {
 	_ = ctx
 	providers := p.resolveProviders(t)
 
@@ -52,7 +52,7 @@ func (p *ProviderPool) ClientFor(ctx context.Context, t tenant.TenantConfig, mod
 	return nil, errors.New("llm: no provider available for model")
 }
 
-func (p *ProviderPool) resolveProviders(t tenant.TenantConfig) []ProviderSettings {
+func (p *ProviderPool) resolveProviders(t pkgtenant.TenantConfig) []ProviderSettings {
 	if t.ParsedPolicyConfig == nil || t.ParsedPolicyConfig.Routing == nil || len(t.ParsedPolicyConfig.Routing.Providers) == 0 {
 		return []ProviderSettings{p.defaultProvider}
 	}
@@ -60,7 +60,7 @@ func (p *ProviderPool) resolveProviders(t tenant.TenantConfig) []ProviderSetting
 	return p.cachedTenantProviders(t.ID, t.ParsedPolicyConfig.Routing.Providers)
 }
 
-func (p *ProviderPool) cachedTenantProviders(tenantID string, defs []tenant.ProviderDefinition) []ProviderSettings {
+func (p *ProviderPool) cachedTenantProviders(tenantID string, defs []pkgtenant.ProviderDefinition) []ProviderSettings {
 	p.mu.RLock()
 	cfgs, ok := p.override[tenantID]
 	p.mu.RUnlock()
