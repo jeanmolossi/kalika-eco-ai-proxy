@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/apperr"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
 
 // Chat handles a full chat completion flow for a given tenant.

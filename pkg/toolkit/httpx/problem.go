@@ -3,8 +3,8 @@ package httpx
 import (
 	"fmt"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/apperr"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/apperr"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/labstack/echo/v4"
 )
 

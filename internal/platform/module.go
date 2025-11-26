@@ -11,7 +11,6 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/cache"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database/pg"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
@@ -21,6 +20,7 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/labstack/echo/v4"
 	"github.com/segmentio/kafka-go"
 )

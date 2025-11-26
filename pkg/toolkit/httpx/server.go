@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/logger"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/otel"

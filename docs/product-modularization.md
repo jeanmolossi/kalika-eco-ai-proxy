@@ -45,6 +45,7 @@ O proxy de IA atual concentra responsabilidades operacionais no módulo `platfor
 ## Progresso inicial (refatoração corrente)
 - Contratos de domínio re-exportados em `pkg/{tenant,guardrails,llm,tokenizer}` para que módulos e futuros serviços dependam de caminhos estáveis sem acoplar-se às implementações de `internal/platform`.
 - Rotas HTTP, casos de uso e roteadores internos já consomem os contratos de `pkg/*`, preparando o código para substituição gradual por clients externos.
+- Infraestrutura compartilhada de configuração, logging, servidor HTTP e erros de aplicação realocada para `pkg/toolkit` para que serviços satélites possam reutilizar contratos estáveis.
 
 ## Critérios de pronto
 - Cada bounded context possui contrato versionado (OpenAPI/gRPC) e SDK em `pkg`.

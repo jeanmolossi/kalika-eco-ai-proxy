@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/bufferwriter"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 )
 
 var (

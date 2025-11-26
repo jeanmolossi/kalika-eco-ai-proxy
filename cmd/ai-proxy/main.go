@@ -8,19 +8,19 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/modules/aiproxy"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/logger"
+	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
+	toolkitlogger "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/logger"
 )
 
 func main() {
 	ctx := context.Background()
-	cfg := config.Load()
-	log := logger.New()
+	cfg := toolkitconfig.Load()
+	log := toolkitlogger.New()
 	app := core.NewApp(log)
 
-	defer logger.Flush()
+	defer toolkitlogger.Flush()
 
 	registry := core.NewRegistry(
 		database.NewModule(),

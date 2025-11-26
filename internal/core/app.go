@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/labstack/echo/v4"
 )
 

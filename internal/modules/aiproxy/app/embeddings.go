@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
 
 // Embeddings handles an embeddings request for a given tenant.

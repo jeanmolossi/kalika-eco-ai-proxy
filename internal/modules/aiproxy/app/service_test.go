@@ -6,12 +6,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/httpx"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
 	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
 	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
 
 func TestChatRateLimitAndGuardrails(t *testing.T) {

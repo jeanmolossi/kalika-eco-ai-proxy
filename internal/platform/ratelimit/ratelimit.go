@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 )
 
 // Result holds the decision and metadata for rate limiting.
