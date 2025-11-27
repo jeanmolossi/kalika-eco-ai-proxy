@@ -2,6 +2,7 @@ package tenant
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
@@ -18,9 +19,44 @@ type module struct{}
 // NewModule creates the tenant module.
 func NewModule() core.Module { return &module{} }
 
-func (m *module) Name() string                                  { return ModuleName }
-func (m *module) Weight() int                                   { return 2 }
-func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
+func (m *module) Name() string { return ModuleName }
+func (m *module) Weight() int  { return 2 }
+func (m *module) Routes(g *echo.Group, c *core.Container) error {
+	store := core.MustGet[Store](c, core.TenantStoreModule)
+
+	g.GET("/tenants/:tenantID", func(ctx echo.Context) error {
+		tenantID := ctx.Param("tenantID")
+
+		tenant, err := store.FindByID(ctx.Request().Context(), tenantID)
+		if err != nil {
+			if err == ErrNotFound {
+				return ctx.NoContent(http.StatusNotFound)
+			}
+
+			return err
+		}
+
+		return ctx.JSON(http.StatusOK, tenant)
+	})
+
+	g.GET("/tenants/api-keys/:apiKey", func(ctx echo.Context) error {
+		apiKey := ctx.Param("apiKey")
+
+		tenant, err := store.FindByAPIKey(ctx.Request().Context(), apiKey)
+		if err != nil {
+			switch err {
+			case ErrInvalidAPIKey, ErrNotFound, ErrInactiveTenant:
+				return ctx.NoContent(http.StatusNotFound)
+			default:
+				return err
+			}
+		}
+
+		return ctx.JSON(http.StatusOK, tenant)
+	})
+
+	return nil
+}
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	conn := core.MustGet[*pg.DB](c, database.PgConn)

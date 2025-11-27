@@ -18,5 +18,5 @@ func Registry() core.Registry {
 
 // HTTPServerConfig builds the HTTP server configuration for the guardrails API.
 func HTTPServerConfig(cfg *toolkitconfig.Config) httpx.Config {
-	return httpx.FromToolkitConfig(cfg)
+	return httpx.FromHTTPServer(cfg.Guard)
 }

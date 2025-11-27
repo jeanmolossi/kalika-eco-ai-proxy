@@ -2,6 +2,78 @@ include:
   - path: ./.docker/kafka/docker-compose.yml
 
 services:
+  gateway:
+    container_name: ai-proxy-gateway
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      GATEWAY_SERVER_PORT: ${GATEWAY_SERVER_PORT:-8080}
+    ports:
+      - "${GATEWAY_SERVER_PORT:-8080}:${GATEWAY_SERVER_PORT:-8080}"
+    depends_on:
+      - postgres-master
+    volumes:
+      - .:/app
+    entrypoint: sh -c "go run ./apps/gateway/main.go"
+    restart: unless-stopped
+
+  tenant:
+    container_name: ai-proxy-tenant
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      TENANT_SERVER_PORT: ${TENANT_SERVER_PORT:-8082}
+    ports:
+      - "${TENANT_SERVER_PORT:-8082}:${TENANT_SERVER_PORT:-8082}"
+    depends_on:
+      - postgres-master
+    volumes:
+      - .:/app
+    entrypoint: sh -c "go run ./apps/tenant/main.go"
+    restart: unless-stopped
+
+  guardrails:
+    container_name: ai-proxy-guardrails
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      GUARDRAIL_SERVER_PORT: ${GUARDRAIL_SERVER_PORT:-8083}
+    ports:
+      - "${GUARDRAIL_SERVER_PORT:-8083}:${GUARDRAIL_SERVER_PORT:-8083}"
+    depends_on:
+      - postgres-master
+    volumes:
+      - .:/app
+    entrypoint: sh -c "go run ./apps/guardrails/main.go"
+    restart: unless-stopped
+
+  observability:
+    container_name: ai-proxy-observability
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      OBSERVABILITY_SERVER_PORT: ${OBSERVABILITY_SERVER_PORT:-8084}
+    ports:
+      - "${OBSERVABILITY_SERVER_PORT:-8084}:${OBSERVABILITY_SERVER_PORT:-8084}"
+    depends_on:
+      - postgres-master
+    volumes:
+      - .:/app
+    entrypoint: sh -c "go run ./apps/observability/main.go"
+    restart: unless-stopped
+
   postgres-master:
     container_name: ai-proxy-postgres-master
     image: postgres:18

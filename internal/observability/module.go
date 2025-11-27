@@ -25,7 +25,7 @@ func NewModule() core.Module { return &module{} }
 
 func (m *module) Name() string                                  { return ModuleName }
 func (m *module) Weight() int                                   { return 7 }
-func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
+func (m *module) Routes(g *echo.Group, c *core.Container) error { return registerRoutes(g, c) }
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	conf := c.Config()

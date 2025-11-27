@@ -13,9 +13,12 @@ type module struct{}
 
 func NewModule() core.Module { return &module{} }
 
-func (m *module) Name() string                                  { return ModuleName }
-func (m *module) Weight() int                                   { return 3 }
-func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
+func (m *module) Name() string { return ModuleName }
+func (m *module) Weight() int  { return 3 }
+func (m *module) Routes(g *echo.Group, c *core.Container) error {
+	registerRoutes(g, c)
+	return nil
+}
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	c.Set(core.GuardrailsModule, ProvideGuardrails(c))

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"os"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/apps/gateway/runtime"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
@@ -21,7 +22,9 @@ func main() {
 
 	registry := runtime.Registry()
 
-	serverCfg := httpx.FromToolkitConfig(cfg)
+	cfg.Server = cfg.Gateway
+
+	serverCfg := httpx.FromHTTPServer(cfg.Gateway)
 	app.StartServer = httpx.Start(serverCfg)
 
 	err := app.Start(ctx, core.StartOptions{
@@ -30,6 +33,6 @@ func main() {
 	})
 	if err != nil {
 		log.ErrorContext(ctx, "failed", slog.Any("error", err))
-		return
+		os.Exit(1)
 	}
 }
