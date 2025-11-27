@@ -48,6 +48,7 @@ Historicamente, o proxy de IA concentrou responsabilidades operacionais no módu
 - O executável do gateway passou a viver em `apps/gateway` e o módulo de domínio em `internal/gateway`, refletindo a topologia orientada a serviços descrita na visão de diretórios.
 - Eventos de uso e auditoria, além da precificação por token, foram consolidados em `pkg/observability`, permitindo que o gateway publique métricas e custos via contrato público antes da extração do serviço de billing.
 - O runtime agora registra módulos separados para tenant, guardrails, rate limiting/cache, LLM/router/tokenizer, observability e database, substituindo o antigo agregador `platform` e aproximando o layout da futura divisão em serviços.
+- Cada bounded context possui um executável próprio em `apps/{gateway,tenant,guardrails,observability}`, com registries mínimos para permitir a operação isolada e servir de ponte para futuras extrações como serviços externos.
 
 ## Critérios de pronto
 - Cada bounded context possui contrato versionado (OpenAPI/gRPC) e SDK em `pkg`.

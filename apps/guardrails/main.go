@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/apps/gateway/runtime"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/apps/guardrails/runtime"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
@@ -14,7 +14,7 @@ import (
 func main() {
 	ctx := context.Background()
 	cfg := toolkitconfig.Load()
-	log := toolkitlogger.New()
+	log := toolkitlogger.New().With("service", "guardrails")
 	app := core.NewApp(log)
 
 	defer toolkitlogger.Flush()
@@ -24,11 +24,7 @@ func main() {
 	serverCfg := httpx.FromToolkitConfig(cfg)
 	app.StartServer = httpx.Start(serverCfg)
 
-	err := app.Start(ctx, core.StartOptions{
-		Registry: registry,
-		Config:   cfg,
-	})
-	if err != nil {
+	if err := app.Start(ctx, core.StartOptions{Registry: registry, Config: cfg}); err != nil {
 		log.ErrorContext(ctx, "failed", slog.Any("error", err))
 		return
 	}

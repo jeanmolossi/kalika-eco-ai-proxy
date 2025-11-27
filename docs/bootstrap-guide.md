@@ -19,12 +19,15 @@ Siga este guia para subir o projeto rapidamente em um ambiente local de desenvol
      - `RATELIMIT_` para ajustes de rate limiting.
      - `USAGE_` e `AUDIT_` para escolher o destino dos eventos: deixe `MODE=file` (padrão) ou defina `MODE=kafka` com `KAFKA_BROKERS` e os tópicos (`USAGE_TOPIC`/`AUDIT_TOPIC`).
      - `KAFKA_` para parâmetros compartilhados de Kafka (ex.: `KAFKA_BROKERS=kafka:9092`).
-3. **Rodar a aplicação localmente**
+3. **Rodar um serviço localmente**
    ```bash
    make build
-  ./bin/gateway
+   ./bin/gateway        # proxy HTTP
+   ./bin/tenant         # API e tarefas de tenants/chaves
+   ./bin/guardrails     # motor de guardrails
+   ./bin/observability  # publishers de usage/audit
    ```
-   ou, para desenvolvimento com Docker Compose:
+   Ajuste `SERVER_PORT` para cada processo se quiser subir mais de um simultaneamente. Para desenvolvimento com Docker Compose (focando no gateway):
    ```bash
    make docker-up
    ```
