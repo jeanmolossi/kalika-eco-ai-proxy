@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/ratelimit"
 )
 
 type Kind string

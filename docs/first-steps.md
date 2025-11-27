@@ -3,15 +3,14 @@
 Este guia apresenta rapidamente o que o produto faz, como o código está organizado e quais convenções seguir ao contribuir.
 
 ## O que é o projeto
-- **Proxy de IA multitenant**: expõe endpoints HTTP para chat e embeddings, roteando requisições para provedores de LLM e aplicando limites por inquilino, guarda-corpos e auditoria. O binário principal sobe um servidor Echo configurado via variáveis `SERVER_*` e injeta módulos de banco, plataforma e AI Proxy antes de iniciar o ciclo de vida completo da aplicação.
+- **Proxy de IA multitenant**: expõe endpoints HTTP para chat e embeddings, roteando requisições para provedores de LLM e aplicando limites por inquilino, guarda-corpos e auditoria. O binário principal sobe um servidor Echo configurado via variáveis `SERVER_*` e injeta módulos de banco, domínio (tenant/guardrails/llm/cache/ratelimit/observability) e gateway antes de iniciar o ciclo de vida completo da aplicação.
 - **Pipelines de chat/embeddings**: cada requisição passa por rate limiting por tokens, cache semântico opcional, guarda-corpos, roteamento para o modelo solicitado e publicação de eventos de uso/auditoria para observabilidade e billing.
 
 ## Estrutura do código
 - `apps/gateway/main.go`: ponto de entrada. Carrega configuração, inicializa logger, registra módulos (banco, tenant, guardrails, rate limit/cache, LLM/router/tokenizer, observabilidade, gateway), configura timeouts do servidor HTTP e executa bootstrap e shutdown gracioso.
 - `internal/core/`: abstrações centrais de lifecycle e DI. `App` orquestra registro de dependências, migrações, rotas HTTP e parada ordenada dos módulos. `Registry` resolve e ordena módulos por peso.
 - `internal/gateway/`: módulo de domínio que implementa chat e embeddings. O `Service` coordena limitador de tokens, cache, guarda-corpos, roteador de modelos e publicação de eventos de uso/auditoria por inquilino.
-- `internal/{tenant,guardrails,ratelimit,cache,llm,observability}/`: módulos especializados que expõem o store de tenants, guardrails, limitador/token cache, pool de LLMs+roteador+tokenizer e publishers de observabilidade. Cada um usa contratos de `pkg/*` e implementações em `internal/platform/*` como anti-corruption layer.
-- `internal/platform/*`: implementações concretas de domínio (tenant store Postgres, guardrails engine, roteador simples, tokenizers, publishers) consumidas pelos módulos acima.
+- `internal/{tenant,guardrails,ratelimit,cache,llm,observability,database}/`: módulos especializados que expõem o store de tenants, guardrails, limitador/token cache, pool de LLMs+roteador+tokenizer, publishers de observabilidade e conexão com banco. Cada um usa contratos de `pkg/*` e suas respectivas implementações locais.
 - `docs/`: guias de bootstrap, roadmap de tarefas e notas de revisão de segurança; este arquivo complementa com visão geral e estilo de código.
 
 ## Como começar a mexer

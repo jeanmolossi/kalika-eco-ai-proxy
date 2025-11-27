@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/ratelimit"
 )
 
 func SetRateLimitHeaders(h http.Header, r ratelimit.Result, now time.Time) {

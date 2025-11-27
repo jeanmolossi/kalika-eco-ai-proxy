@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway/app"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/ratelimit"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 	pkgtokenizer "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tokenizer"
 )

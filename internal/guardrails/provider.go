@@ -2,8 +2,8 @@ package guardrails
 
 import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database/pg"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
 )
 
 func ProvideGuardrails(c *core.Container) Engine {

@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/ratelimit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/ratelimit"
 	pkgguardrails "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
 	pkgllm "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/llm"
 	observability "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/observability"

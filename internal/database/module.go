@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database/pg"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
 	"github.com/labstack/echo/v4"
 )
 

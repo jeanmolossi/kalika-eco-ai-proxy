@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	platformcache "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/cache"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,7 +18,7 @@ func (m *module) Weight() int                                   { return 5 }
 func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
-	c.Set(core.SemanticCacheModule, platformcache.NewNoopSemanticCache())
+	c.Set(core.SemanticCacheModule, NewNoopSemanticCache())
 	return nil
 }
 

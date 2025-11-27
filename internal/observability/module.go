@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/usage"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/audit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/usage"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/labstack/echo/v4"
 	"github.com/segmentio/kafka-go"

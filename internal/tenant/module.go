@@ -5,9 +5,8 @@ import (
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database/pg"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
 	"github.com/labstack/echo/v4"
 )
 
@@ -25,12 +24,12 @@ func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	conn := core.MustGet[*pg.DB](c, database.PgConn)
-	c.Set(core.TenantStoreModule, tenant.NewPostgresStore(conn.Pool()))
+	c.Set(core.TenantStoreModule, NewPostgresStore(conn.Pool()))
 	return nil
 }
 
 func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Context) error, error) {
-	store := core.MustGet[tenant.Store](c, core.TenantStoreModule)
+	store := core.MustGet[Store](c, core.TenantStoreModule)
 	log := c.Logger()
 
 	ctx, cancel := context.WithCancel(ctx)

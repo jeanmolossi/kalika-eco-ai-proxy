@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/llm"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/router"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/tokenizer"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/llm/router"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/llm/tokenizer"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/labstack/echo/v4"
 )
@@ -30,7 +29,7 @@ func (m *module) Provide(_ context.Context, c *core.Container) error {
 
 	aliases := buildAliases(conf)
 
-	llmDefaults := llm.ProviderSettings{
+	llmDefaults := ProviderSettings{
 		Name:            conf.LLM.ProviderName,
 		BaseURL:         conf.LLM.BaseURL,
 		APIKey:          conf.LLM.APIKey,
@@ -41,7 +40,7 @@ func (m *module) Provide(_ context.Context, c *core.Container) error {
 		EmbedModels:     conf.LLM.EmbedModels,
 	}
 
-	pool := llm.NewProviderPool(llmDefaults, llm.NoopMetrics{})
+	pool := NewProviderPool(llmDefaults, NoopMetrics{})
 	tokenzr := tokenizer.NewOpenAITikTokenCounter(aliases)
 
 	c.Set(core.RouterModule, router.NewSimpleRouter(pool))

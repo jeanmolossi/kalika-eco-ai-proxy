@@ -5,11 +5,11 @@ import (
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/cache"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/llm"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/ratelimit"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"

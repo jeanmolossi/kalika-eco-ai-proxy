@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/guardrails"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,7 +18,7 @@ func (m *module) Weight() int                                   { return 3 }
 func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
-	c.Set(core.GuardrailsModule, guardrails.ProvideGuardrails(c))
+	c.Set(core.GuardrailsModule, ProvideGuardrails(c))
 	return nil
 }
 
