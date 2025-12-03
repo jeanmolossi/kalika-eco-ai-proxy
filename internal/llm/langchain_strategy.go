@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	maigo "github.com/jeanmolossi/maigo/pkg/maigo"
+	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/anthropic"
@@ -44,7 +46,7 @@ func newOpenAIStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 	timeout := normalizeTimeout(cfg.RequestTimeout)
 	retries := normalizeRetries(cfg.MaxRetries)
 
-	httpClient := &http.Client{Timeout: timeout}
+	httpClient := newMaiGoHTTPClient(cfg.BaseURL, timeout)
 
 	opts := []openai.Option{
 		openai.WithToken(cfg.APIKey),
@@ -99,7 +101,7 @@ func newAnthropicStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 	timeout := normalizeTimeout(cfg.RequestTimeout)
 	retries := normalizeRetries(cfg.MaxRetries)
 
-	httpClient := &http.Client{Timeout: timeout}
+	httpClient := newMaiGoHTTPClient(cfg.BaseURL, timeout)
 
 	opts := []anthropic.Option{anthropic.WithToken(cfg.APIKey), anthropic.WithHTTPClient(httpClient)}
 
@@ -131,7 +133,7 @@ func newOllamaStrategy(cfg ProviderSettings) (ModelStrategy, error) {
 	timeout := normalizeTimeout(cfg.RequestTimeout)
 	retries := normalizeRetries(cfg.MaxRetries)
 
-	httpClient := &http.Client{Timeout: timeout}
+	httpClient := newMaiGoHTTPClient(cfg.BaseURL, timeout)
 
 	opts := []ollama.Option{ollama.WithServerURL(trimURL(cfg.BaseURL)), ollama.WithHTTPClient(httpClient)}
 
@@ -376,6 +378,28 @@ func extractUsage(resp *llms.ContentResponse, key string) int {
 		return int(val)
 	default:
 		return 0
+	}
+}
+
+func newMaiGoHTTPClient(baseURL string, timeout time.Duration) *http.Client {
+	trimmed := trimURL(baseURL)
+
+	if trimmed == "" {
+		return &http.Client{Timeout: timeout}
+	}
+
+	client := maigo.NewClient(trimmed).Config().SetTimeout(timeout).Build()
+
+	config, ok := client.(maigocontracts.ClientConfig)
+	if !ok {
+		return &http.Client{Timeout: timeout}
+	}
+
+	httpCfg := config.HttpClient()
+
+	return &http.Client{
+		Timeout:   httpCfg.Timeout(),
+		Transport: httpCfg.Transport(),
 	}
 }
 

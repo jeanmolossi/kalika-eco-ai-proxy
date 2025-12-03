@@ -2,17 +2,19 @@ package llm
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
+
+	maigo "github.com/jeanmolossi/maigo/pkg/maigo"
+	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
+	"github.com/jeanmolossi/maigo/pkg/maigo/header"
+	"github.com/jeanmolossi/maigo/pkg/maigo/mime"
 )
 
-// ProviderSettings describes how to reach an upstream LLM provider.
 type ProviderSettings struct {
 	Name            string
 	BaseURL         string
@@ -27,9 +29,7 @@ type ProviderSettings struct {
 // HTTPClient calls an upstream OpenAI-compatible HTTP endpoint.
 // It supports basic retries and streaming via server-sent events.
 type HTTPClient struct {
-	baseURL         string
-	apiKey          string
-	client          *http.Client
+	client          maigocontracts.ClientHTTPMethods
 	metrics         MetricsRecorder
 	maxRetries      int
 	enableStreaming bool
@@ -55,10 +55,15 @@ func NewHTTPClient(settings ProviderSettings, metrics MetricsRecorder) (*HTTPCli
 		retries = 0
 	}
 
+	builder := maigo.NewClient(strings.TrimRight(settings.BaseURL, "/"))
+	builder.Config().SetTimeout(timeout)
+
+	if settings.APIKey != "" {
+		builder.Header().Set(header.Authorization, "Bearer "+settings.APIKey)
+	}
+
 	return &HTTPClient{
-		baseURL:         strings.TrimRight(settings.BaseURL, "/"),
-		apiKey:          settings.APIKey,
-		client:          &http.Client{Timeout: timeout},
+		client:          builder.Build(),
 		metrics:         metrics,
 		maxRetries:      retries,
 		enableStreaming: settings.EnableStreaming,
@@ -68,7 +73,7 @@ func NewHTTPClient(settings ProviderSettings, metrics MetricsRecorder) (*HTTPCli
 // Chat sends a chat completion request to the provider.
 func (c *HTTPClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	start := time.Now()
-	resp, err := c.doRequest(ctx, http.MethodPost, c.baseURL+"/chat/completions", chatPayload(req))
+	resp, err := c.doRequest(ctx, "chat/completions", chatPayload(req))
 	latency := time.Since(start)
 
 	defer func() {
@@ -89,7 +94,7 @@ func (c *HTTPClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, e
 // Embed sends an embeddings request to the provider.
 func (c *HTTPClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error) {
 	start := time.Now()
-	resp, err := c.doRequest(ctx, http.MethodPost, c.baseURL+"/embeddings", embedPayload(req))
+	resp, err := c.doRequest(ctx, "embeddings", embedPayload(req))
 	latency := time.Since(start)
 
 	defer func() {
@@ -103,54 +108,52 @@ func (c *HTTPClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse
 	return parseEmbedResponse(resp)
 }
 
-func (c *HTTPClient) doRequest(ctx context.Context, method, url string, body any) (*http.Response, error) {
-	payload, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-
+func (c *HTTPClient) doRequest(ctx context.Context, path string, body any) (*maigo.Response, error) {
 	retries := c.maxRetries + 1
 
-	var resp *http.Response
+	var (
+		resp *maigo.Response
+		err  error
+	)
+
 	for attempt := 0; attempt < retries; attempt++ {
-		resp, err = c.singleRequest(ctx, method, url, payload)
-		if err == nil && resp.StatusCode < 500 {
+		resp, err = c.singleRequest(ctx, path, body)
+		if err == nil && !resp.Status().Is5xxServerError() {
 			return resp, nil
+		}
+
+		if resp != nil {
+			resp.Body().Close()
 		}
 
 		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
 			time.Sleep(time.Duration(attempt+1) * 150 * time.Millisecond)
 			continue
 		}
-
-		if resp != nil {
-			_ = resp.Body.Close()
-		}
 	}
 
 	return resp, err
 }
 
-func (c *HTTPClient) singleRequest(ctx context.Context, method, url string, payload []byte) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(payload))
+func (c *HTTPClient) singleRequest(ctx context.Context, path string, body any) (*maigo.Response, error) {
+	req := c.client.POST(path).
+		Context().Set(ctx).
+		Header().AddContentType(mime.JSON).
+		Body().AsJSON(body)
+
+	respRaw, err := req.Send()
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
-	if c.apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	resp, ok := respRaw.(*maigo.Response)
+	if !ok {
+		return nil, fmt.Errorf("llm: unexpected response type %T", respRaw)
 	}
 
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode >= http.StatusBadRequest && resp.StatusCode < http.StatusInternalServerError {
-		defer resp.Body.Close()
-		return nil, fmt.Errorf("llm: upstream %d", resp.StatusCode)
+	if resp.Status().Is4xxClientError() {
+		resp.Body().Close()
+		return nil, fmt.Errorf("llm: upstream %d", resp.Status().Code())
 	}
 
 	return resp, nil
@@ -211,11 +214,9 @@ type streamEnvelope struct {
 	Choices []streamChoice `json:"choices"`
 }
 
-func parseChatResponse(resp *http.Response) (ChatResponse, error) {
-	defer resp.Body.Close()
-
+func parseChatResponse(resp *maigo.Response) (ChatResponse, error) {
 	var envelope chatEnvelope
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+	if err := resp.Body().AsJSON(&envelope); err != nil {
 		return ChatResponse{}, err
 	}
 
@@ -235,14 +236,15 @@ func parseChatResponse(resp *http.Response) (ChatResponse, error) {
 	}, nil
 }
 
-func (c *HTTPClient) consumeStream(resp *http.Response) (ChatResponse, error) {
-	defer resp.Body.Close()
-
+func (c *HTTPClient) consumeStream(resp *maigo.Response) (ChatResponse, error) {
 	if !c.enableStreaming {
 		return ChatResponse{}, errors.New("llm: streaming disabled")
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
+	raw := resp.Raw()
+	defer raw.Body.Close()
+
+	scanner := bufio.NewScanner(raw.Body)
 	scanner.Buffer(make([]byte, 0, 1024), 1<<20)
 
 	var (
@@ -290,11 +292,9 @@ type embedEnvelope struct {
 	Model string `json:"model"`
 }
 
-func parseEmbedResponse(resp *http.Response) (EmbedResponse, error) {
-	defer resp.Body.Close()
-
+func parseEmbedResponse(resp *maigo.Response) (EmbedResponse, error) {
 	var envelope embedEnvelope
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+	if err := resp.Body().AsJSON(&envelope); err != nil {
 		return EmbedResponse{}, err
 	}
 

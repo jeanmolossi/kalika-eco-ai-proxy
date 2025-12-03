@@ -50,6 +50,17 @@ Historicamente, o proxy de IA concentrou responsabilidades operacionais no módu
 - O runtime agora registra módulos separados para tenant, guardrails, rate limiting/cache, LLM/router/tokenizer, observability e database, substituindo o antigo agregador `platform` e aproximando o layout da futura divisão em serviços.
 - Cada bounded context possui um executável próprio em `apps/{gateway,tenant,guardrails,observability}`, com registries mínimos para permitir a operação isolada e servir de ponte para futuras extrações como serviços externos.
 
+## TODO para concluir o isolamento completo
+- **Banco e storage por serviço**: mover schemas e migrações para pastas específicas de cada app e garantir que `docker-compose` provisiona instâncias independentes ou databases separados.
+- **Autenticação/assinatura entre serviços**: padronizar autenticação mTLS ou tokens de serviço para chamadas HTTP/gRPC entre gateway, guardrails, tenant e observability.
+- **Contratos versionados e pact tests**: publicar OpenAPI/gRPC por serviço e criar testes de contrato (gateway ↔ tenant/guardrails/observability) para permitir deploys independentes.
+- **Circuit breakers e retries cross-service**: adicionar camadas de fallback/resiliência específicas em cada client remoto para evitar acoplamento via erro cascata.
+- **Build/pipeline por serviço**: separar pipelines de build/deploy (imagens, Helm charts) para cada app em `apps/`, removendo as dependências cruzadas ainda existentes no Makefile.
+
+## Itens para abrir como issues no MaiGo
+- Expor um construtor nativo para obter um `*http.Client` (ou adaptador) a partir do client MaiGo para uso em bibliotecas que não aceitam interfaces.
+- Permitir inicializar clientes sem exigir base URL (modo opcional) apenas para reaproveitar configuração de timeout/transport em cenários onde a base é fornecida em runtime externo.
+
 ## Critérios de pronto
 - Cada bounded context possui contrato versionado (OpenAPI/gRPC) e SDK em `pkg`.
 - O runtime do gateway depende apenas de módulos com contratos finos (`pkg/*`), aptos a serem substituídos por clients externos sem alterar rotas HTTP ou casos de uso.

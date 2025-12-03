@@ -2,11 +2,12 @@ package remote
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
+	"github.com/jeanmolossi/maigo/pkg/maigo"
+	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,10 +24,14 @@ func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	conf := c.Config()
-	httpClient := &http.Client{Timeout: 10 * time.Second}
 
-	tenantBase := strings.TrimSuffix(conf.Services.TenantURL, "/")
-	c.Set(core.TenantStoreModule, newTenantClient(httpClient, tenantBase))
+	newClient := func(baseURL string) maigocontracts.ClientHTTPMethods {
+		return maigo.NewClient(strings.TrimSuffix(baseURL, "/")).Config().
+			SetTimeout(10 * time.Second).
+			Build()
+	}
+
+	c.Set(core.TenantStoreModule, newTenantClient(newClient(conf.Services.TenantURL)))
 
 	return nil
 }
