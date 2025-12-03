@@ -20,7 +20,8 @@ services:
       - postgres-master
     volumes:
       - .:/app
-    entrypoint: sh -c "go run ./apps/gateway/main.go"
+    entrypoint: >
+      sh -c "reflex -r '\\.go$' -s -- sh -c 'go run ./apps/gateway/main.go'"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${GATEWAY_SERVER_PORT:-8080}/api/healthz || exit 1"]
       interval: 30s
@@ -44,7 +45,8 @@ services:
       - postgres-master
     volumes:
       - .:/app
-    entrypoint: sh -c "go run ./apps/tenant/main.go"
+    entrypoint: >
+      sh -c "reflex -r '\\.go$' -s -- sh -c 'go run ./apps/tenant/main.go'"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${TENANT_SERVER_PORT:-8082}/api/healthz || exit 1"]
       interval: 30s
@@ -69,7 +71,8 @@ services:
       - postgres-master
     volumes:
       - .:/app
-    entrypoint: sh -c "go run ./apps/guardrails/main.go"
+    entrypoint: >
+      sh -c "reflex -r '\\.go$' -s -- sh -c 'go run ./apps/guardrails/main.go'"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${GUARDRAIL_SERVER_PORT:-8083}/api/healthz || exit 1"]
       interval: 30s
@@ -93,7 +96,8 @@ services:
       - postgres-master
     volumes:
       - .:/app
-    entrypoint: sh -c "go run ./apps/observability/main.go"
+    entrypoint: >
+      sh -c "reflex -r '\\.go$' -s -- sh -c 'go run ./apps/observability/main.go'"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:${OBSERVABILITY_SERVER_PORT:-8084}/api/healthz || exit 1"]
       interval: 30s
@@ -123,36 +127,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  api:
-    container_name: ai-proxy-api
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    env_file:
-      - .env
-    ports:
-      - "8081:8081"
-    depends_on:
-      # - mysql-master
-      # - mysql-replica
-      - postgres-master
-      # - postgres-replica
-    volumes:
-      - .:/app
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    entrypoint: >
-      sh -c "
-        socat TCP-LISTEN:8080,fork,bind=127.0.0.1 TCP:host.docker.internal:8080 & reflex -c reflex.conf
-      "
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081/healthz || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
 
 volumes:
   pg_master_data:

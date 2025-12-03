@@ -77,7 +77,10 @@ func (m *module) provideUsagePublisher(conf *config.Config) (usage.Publisher, er
 			return nil, err
 		}
 
-		return usage.NewKafkaPublisher(writer), nil
+		pub := usage.NewKafkaPublisher(writer)
+		m.closers = append(m.closers, pub)
+
+		return pub, nil
 	default:
 		publisher, err := usage.NewFilePublisher(resolveSinkPath(conf.UsageSink.FilePath, filepath.Join("logs", "usage-events.log")))
 		if err != nil {
@@ -103,7 +106,10 @@ func (m *module) provideAuditPublisher(conf *config.Config) (audit.Publisher, er
 			return nil, err
 		}
 
-		return audit.NewKafkaPublisher(writer), nil
+		pub := audit.NewKafkaPublisher(writer)
+		m.closers = append(m.closers, pub)
+
+		return pub, nil
 	default:
 		publisher, err := audit.NewFilePublisher(resolveSinkPath(conf.AuditSink.FilePath, filepath.Join("logs", "audit-events.log")))
 		if err != nil {
@@ -132,8 +138,6 @@ func (m *module) buildKafkaWriter(topic string, brokers []string, topicErr, brok
 		AllowAutoTopicCreation: false,
 		RequiredAcks:           kafka.RequireAll,
 	}
-
-	m.closers = append(m.closers, writer)
 
 	return writer, nil
 }

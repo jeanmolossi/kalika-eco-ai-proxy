@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -17,6 +18,8 @@ var ErrUsagePublisherQueueFull = errors.New("usage publisher queue is full")
 type KafkaPublisher struct {
 	writer *kafka.Writer
 	queue  chan kafka.Message
+	wg     sync.WaitGroup
+	once   sync.Once
 }
 
 // NewKafkaPublisher builds a publisher using the provided writer.
@@ -25,6 +28,8 @@ func NewKafkaPublisher(writer *kafka.Writer) *KafkaPublisher {
 		writer: writer,
 		queue:  make(chan kafka.Message, usageQueueSize),
 	}
+
+	p.wg.Add(1)
 
 	go p.run()
 
@@ -59,12 +64,20 @@ func (p *KafkaPublisher) Publish(ctx context.Context, ev Event) error {
 
 // Close shuts down the underlying writer.
 func (p *KafkaPublisher) Close() error {
-	close(p.queue)
+	var closeErr error
 
-	return p.writer.Close()
+	p.once.Do(func() {
+		close(p.queue)
+		p.wg.Wait()
+		closeErr = p.writer.Close()
+	})
+
+	return closeErr
 }
 
 func (p *KafkaPublisher) run() {
+	defer p.wg.Done()
+
 	for msg := range p.queue {
 		_ = p.writer.WriteMessages(context.Background(), msg)
 	}
