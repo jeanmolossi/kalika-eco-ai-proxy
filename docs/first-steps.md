@@ -3,14 +3,15 @@
 Este guia apresenta rapidamente o que o produto faz, como o código está organizado e quais convenções seguir ao contribuir.
 
 ## O que é o projeto
-- **Proxy de IA multitenant**: expõe endpoints HTTP para chat e embeddings, roteando requisições para provedores de LLM e aplicando limites por inquilino, guarda-corpos e auditoria. O binário principal sobe um servidor Echo configurado via variáveis `SERVER_*` e injeta módulos de banco, plataforma e AI Proxy antes de iniciar o ciclo de vida completo da aplicação.
+- **Proxy de IA multitenant**: expõe endpoints HTTP para chat e embeddings, roteando requisições para provedores de LLM e aplicando limites por inquilino, guarda-corpos e auditoria. Agora cada bounded context tem um binário dedicado em `apps/` (`gateway`, `tenant`, `guardrails`, `observability`), todos configuráveis via `SERVER_*` e com wiring de módulos isolados para facilitar a extração como serviços independentes.
 - **Pipelines de chat/embeddings**: cada requisição passa por rate limiting por tokens, cache semântico opcional, guarda-corpos, roteamento para o modelo solicitado e publicação de eventos de uso/auditoria para observabilidade e billing.
 
 ## Estrutura do código
-- `cmd/ai-proxy/main.go`: ponto de entrada. Carrega configuração, inicializa logger, registra módulos (banco, plataforma, ai-proxy), configura timeouts do servidor HTTP e executa bootstrap e shutdown gracioso.
+- `apps/gateway/main.go`: ponto de entrada do gateway HTTP. Carrega configuração, inicializa logger, registra módulos (banco, tenant, guardrails, rate limit/cache, LLM/router/tokenizer, observabilidade, gateway), configura timeouts do servidor HTTP e executa bootstrap e shutdown gracioso.
+- `apps/{tenant,guardrails,observability}/main.go`: binários dedicados a cada bounded context. Cada um injeta apenas os módulos necessários (`database` + módulo do domínio) e sobe um servidor HTTP básico (healthcheck) para permitir operação isolada ou em composições de serviços.
 - `internal/core/`: abstrações centrais de lifecycle e DI. `App` orquestra registro de dependências, migrações, rotas HTTP e parada ordenada dos módulos. `Registry` resolve e ordena módulos por peso.
-- `internal/modules/aiproxy/`: módulo de domínio que implementa chat e embeddings. O `Service` coordena limitador de tokens, cache, guarda-corpos, roteador de modelos e publicação de eventos de uso/auditoria por inquilino.
-- `internal/platform/`: utilitários compartilhados (config, HTTP, logger, roteador de modelos, guardrails, rate limiting, tenants, tokenizer, auditoria, usage events). A maioria das dependências usadas pelo módulo de AI Proxy vive aqui.
+- `internal/gateway/`: módulo de domínio que implementa chat e embeddings. O `Service` coordena limitador de tokens, cache, guarda-corpos, roteador de modelos e publicação de eventos de uso/auditoria por inquilino.
+- `internal/{tenant,guardrails,ratelimit,cache,llm,observability,database}/`: módulos especializados que expõem o store de tenants, guardrails, limitador/token cache, pool de LLMs+roteador+tokenizer, publishers de observabilidade e conexão com banco. Cada um usa contratos de `pkg/*` e suas respectivas implementações locais.
 - `docs/`: guias de bootstrap, roadmap de tarefas e notas de revisão de segurança; este arquivo complementa com visão geral e estilo de código.
 
 ## Como começar a mexer
@@ -20,7 +21,14 @@ Este guia apresenta rapidamente o que o produto faz, como o código está organi
   go mod download
   make build
   ```
-- Suba localmente (variáveis `SERVER_*` configuradas) com `./bin/jobs` ou via `make docker-up` para usar Docker Compose.
+- Escolha o serviço que quer rodar localmente (ajuste `SERVER_PORT` para não conflitar entre eles):
+  ```bash
+  ./bin/gateway           # proxy HTTP
+  ./bin/tenant            # gestão de tenants e chaves
+  ./bin/guardrails        # motor de guardrails
+  ./bin/observability     # publishers de usage/audit
+  ```
+  Também é possível usar `make docker-up` para rodar em Docker Compose focando no gateway.
 - Rode verificações: `make fmt`, `make lint`, `make test`.
 
 ## Configuração de CORS e provedores de LLM

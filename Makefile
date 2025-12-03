@@ -2,12 +2,18 @@
 
 GOPATH ?= $(which go)
 
+SERVICES := gateway tenant guardrails observability
+
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS=":.*?## "} {printf "\t\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build the Go binary
-	@go build -o bin/jobs cmd/ai-proxy/main.go
+build: ## Build all service binaries
+	@mkdir -p bin
+	@for svc in $(SERVICES); do \
+		echo "building $$svc"; \
+		go build -o bin/$$svc apps/$$svc/main.go; \
+	done
 
 test: ## Run all tests
 	@go test ./... -cover
@@ -25,7 +31,7 @@ docker-build: ## Build and run Docker compose for development
 
 docker-up: ## Start Docker compose services
 	@docker compose up -d
-	@docker compose logs -f api
+	@docker compose logs -f gateway
 
 docker-down: ## Stop docker compose services
 	@docker compose down

@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/platform/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 )
 
 // Container is a simple dependency registry (like a controlled service locator).

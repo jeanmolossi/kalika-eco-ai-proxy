@@ -8,12 +8,12 @@ const (
 	LoggerModule = "core:logger"
 	EchoModule   = "core:echo"
 
-	TenantStoreModule    = "platform:tenantstore"
-	RateLimiterModule    = "platform:ratelimiter"
-	SemanticCacheModule  = "platform:semantic_cache"
-	GuardrailsModule     = "platform:guardrails"
-	UsagePublisherModule = "platform:usage_publisher"
-	AuditPublisherModule = "platform:audit_publisher"
-	RouterModule         = "platform:router"
-	TokenizerModule      = "platform:tokenizer"
+	TenantStoreModule    = "tenant:store"
+	RateLimiterModule    = "ratelimit:limiter"
+	SemanticCacheModule  = "cache:semantic"
+	GuardrailsModule     = "guardrails:engine"
+	UsagePublisherModule = "observability:usage_publisher"
+	AuditPublisherModule = "observability:audit_publisher"
+	RouterModule         = "llm:router"
+	TokenizerModule      = "llm:tokenizer" //nolint:gosec // container key identifier
 )
