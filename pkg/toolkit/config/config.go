@@ -23,6 +23,10 @@ type Config struct {
 
 	LLM       LLM       `envPrefix:"LLM_"`
 	PgDB      Postgres  `envPrefix:"POSTGRES_"`
+	GatewayDB Postgres  `envPrefix:"GATEWAY_POSTGRES_"`
+	TenantDB  Postgres  `envPrefix:"TENANT_POSTGRES_"`
+	GuardDB   Postgres  `envPrefix:"GUARDRAIL_POSTGRES_"`
+	ObserveDB Postgres  `envPrefix:"OBSERVABILITY_POSTGRES_"`
 	RateLimit RateLimit `envPrefix:"RATELIMIT_"`
 	Kafka     Kafka     `envPrefix:"KAFKA_"`
 	UsageSink UsageSink `envPrefix:"USAGE_"`

@@ -17,10 +17,15 @@ func main() {
 	cfg := toolkitconfig.Load()
 	log := toolkitlogger.New().With("service", "guardrails")
 	app := core.NewApp(log)
+	cfg.PgDB = toolkitconfig.ChoosePostgres(cfg.GuardDB, cfg.PgDB)
 
 	defer toolkitlogger.Flush()
 
 	registry := runtime.Registry()
+
+	if cfg.Services.AuthToken != "" {
+		app.E.Use(httpx.ServiceAuthMiddleware(cfg.Services.AuthToken))
+	}
 
 	cfg.Server = cfg.Guard
 

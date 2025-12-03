@@ -51,10 +51,10 @@ Historicamente, o proxy de IA concentrou responsabilidades operacionais no módu
 - Cada bounded context possui um executável próprio em `apps/{gateway,tenant,guardrails,observability}`, com registries mínimos para permitir a operação isolada e servir de ponte para futuras extrações como serviços externos.
 
 ## TODO para concluir o isolamento completo
-- **Banco e storage por serviço**: mover schemas e migrações para pastas específicas de cada app e garantir que `docker-compose` provisiona instâncias independentes ou databases separados.
-- **Autenticação/assinatura entre serviços**: padronizar autenticação mTLS ou tokens de serviço para chamadas HTTP/gRPC entre gateway, guardrails, tenant e observability.
+- ~~**Banco e storage por serviço**: mover schemas e migrações para pastas específicas de cada app e garantir que `docker-compose` provisiona instâncias independentes ou databases separados.~~ Cada app agora aceita `*_POSTGRES_DB` dedicado, provisionado automaticamente pelo `postgres-master` em `docker-compose`, isolando os schemas.
+- ~~**Autenticação/assinatura entre serviços**: padronizar autenticação mTLS ou tokens de serviço para chamadas HTTP/gRPC entre gateway, guardrails, tenant e observability.~~ O tráfego HTTP entre serviços usa `SERVICES_AUTH_TOKEN`, checado em middleware compartilhado e propagado pelos clients remotos.
 - **Contratos versionados e pact tests**: publicar OpenAPI/gRPC por serviço e criar testes de contrato (gateway ↔ tenant/guardrails/observability) para permitir deploys independentes.
-- **Circuit breakers e retries cross-service**: adicionar camadas de fallback/resiliência específicas em cada client remoto para evitar acoplamento via erro cascata.
+- ~~**Circuit breakers e retries cross-service**: adicionar camadas de fallback/resiliência específicas em cada client remoto para evitar acoplamento via erro cascata.~~ Os clients remotos usam retries configuráveis e transporte com circuit breaker compartilhado para proteger chamadas entre bounded contexts.
 - **Build/pipeline por serviço**: separar pipelines de build/deploy (imagens, Helm charts) para cada app em `apps/`, removendo as dependências cruzadas ainda existentes no Makefile.
 
 ## Itens para abrir como issues no MaiGo
