@@ -112,8 +112,9 @@ func (c *HTTPClient) doRequest(ctx context.Context, path string, body any) (*mai
 	retries := c.maxRetries + 1
 
 	var (
-		resp *maigo.Response
-		err  error
+		resp   *maigo.Response
+		err    error
+		status int
 	)
 
 	for attempt := 0; attempt < retries; attempt++ {
@@ -123,7 +124,9 @@ func (c *HTTPClient) doRequest(ctx context.Context, path string, body any) (*mai
 		}
 
 		if resp != nil {
+			status = resp.Status().Code()
 			resp.Body().Close()
+			resp = nil
 		}
 
 		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
@@ -132,7 +135,15 @@ func (c *HTTPClient) doRequest(ctx context.Context, path string, body any) (*mai
 		}
 	}
 
-	return resp, err
+	if err == nil {
+		if status != 0 {
+			return nil, fmt.Errorf("llm: upstream %d after %d attempts", status, retries)
+		}
+
+		return nil, fmt.Errorf("llm: request failed after %d attempts", retries)
+	}
+
+	return nil, fmt.Errorf("llm: request failed after %d attempts: %w", retries, err)
 }
 
 func (c *HTTPClient) singleRequest(ctx context.Context, path string, body any) (*maigo.Response, error) {

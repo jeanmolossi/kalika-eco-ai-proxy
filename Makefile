@@ -30,8 +30,8 @@ docker-build: ## Build and run Docker compose for development
 	@docker compose up --build
 
 docker-up: ## Start Docker compose services
-@docker compose up -d
-@docker compose logs -f gateway
+	@docker compose up -d
+	@docker compose logs -f gateway
 
 docker-down: ## Stop docker compose services
 	@docker compose down

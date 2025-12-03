@@ -29,6 +29,7 @@ func main() {
 
 	if err := app.Start(ctx, core.StartOptions{Registry: registry, Config: cfg}); err != nil {
 		log.ErrorContext(ctx, "failed", slog.Any("error", err))
+		toolkitlogger.Flush()
 		os.Exit(1)
 	}
 }

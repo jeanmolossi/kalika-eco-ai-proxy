@@ -64,9 +64,11 @@ func (p *FilePublisher) Publish(_ context.Context, ev Event) error {
 }
 
 // Close stops the worker and flushes pending messages.
-func (p *FilePublisher) Close() {
+func (p *FilePublisher) Close() error {
 	close(p.queue)
 	p.wg.Wait()
+
+	return nil
 }
 
 func (p *FilePublisher) run() {

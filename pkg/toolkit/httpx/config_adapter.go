@@ -22,6 +22,6 @@ func FromHTTPServer(server toolkitconfig.HTTPServer) Config {
 		WriteTimeout:        10 * time.Second,
 		IdleTimeout:         30 * time.Second,
 		ShutdownTimeout:     15 * time.Second,
-		MaxRequestBodyBytes: 1 << 20, // 1MiB
+		MaxRequestBodyBytes: server.MaxRequestBodyBytes,
 	}
 }

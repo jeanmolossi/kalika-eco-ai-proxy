@@ -79,7 +79,14 @@ func (m *module) provideUsagePublisher(conf *config.Config) (usage.Publisher, er
 
 		return usage.NewKafkaPublisher(writer), nil
 	default:
-		return usage.NewFilePublisher(resolveSinkPath(conf.UsageSink.FilePath, filepath.Join("logs", "usage-events.log")))
+		publisher, err := usage.NewFilePublisher(resolveSinkPath(conf.UsageSink.FilePath, filepath.Join("logs", "usage-events.log")))
+		if err != nil {
+			return nil, fmt.Errorf("creating usage file publisher: %w", err)
+		}
+
+		m.closers = append(m.closers, publisher)
+
+		return publisher, nil
 	}
 }
 
@@ -98,7 +105,14 @@ func (m *module) provideAuditPublisher(conf *config.Config) (audit.Publisher, er
 
 		return audit.NewKafkaPublisher(writer), nil
 	default:
-		return audit.NewFilePublisher(resolveSinkPath(conf.AuditSink.FilePath, filepath.Join("logs", "audit-events.log")))
+		publisher, err := audit.NewFilePublisher(resolveSinkPath(conf.AuditSink.FilePath, filepath.Join("logs", "audit-events.log")))
+		if err != nil {
+			return nil, fmt.Errorf("creating audit file publisher: %w", err)
+		}
+
+		m.closers = append(m.closers, publisher)
+
+		return publisher, nil
 	}
 }
 

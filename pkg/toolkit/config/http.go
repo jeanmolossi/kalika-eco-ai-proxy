@@ -6,11 +6,12 @@ import (
 )
 
 type HTTPServer struct {
-	Host           string        `env:"HOST"            envDefault:"0.0.0.0"`
-	Port           int           `env:"PORT"            envDefault:"8081"`
-	BasePath       string        `env:"BASE_PATH"       envDefault:"/api"`
-	ReadTimeout    time.Duration `env:"READ_TIMEOUT"    envDefault:"5s"`
-	AllowedOrigins []string      `env:"ALLOWED_ORIGINS" envSeparator:","`
+	Host                string        `env:"HOST"                   envDefault:"0.0.0.0"`
+	Port                int           `env:"PORT"                   envDefault:"8081"`
+	BasePath            string        `env:"BASE_PATH"              envDefault:"/api"`
+	ReadTimeout         time.Duration `env:"READ_TIMEOUT"           envDefault:"5s"`
+	AllowedOrigins      []string      `env:"ALLOWED_ORIGINS"        envSeparator:","`
+	MaxRequestBodyBytes int64         `env:"MAX_REQUEST_BODY_BYTES" envDefault:"20971520"`
 
 	TLSCertFile string `env:"TLS_CERTFILE"`
 	TLSKeyFile  string `env:"TLS_KEYFILE"`
@@ -22,6 +23,10 @@ type HTTPServer struct {
 // represents the root.
 func (h *HTTPServer) Normalize() {
 	h.BasePath = NormalizeBasePath(h.BasePath)
+
+	if h.MaxRequestBodyBytes <= 0 {
+		h.MaxRequestBodyBytes = 20 << 20 // 20MiB
+	}
 }
 
 // NormalizeBasePath standardizes base paths used by the HTTP server.

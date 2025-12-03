@@ -15,7 +15,7 @@ import (
 func main() {
 	ctx := context.Background()
 	cfg := toolkitconfig.Load()
-	log := toolkitlogger.New()
+	log := toolkitlogger.New().With("service", "gateway")
 	app := core.NewApp(log)
 
 	defer toolkitlogger.Flush()
@@ -33,6 +33,7 @@ func main() {
 	})
 	if err != nil {
 		log.ErrorContext(ctx, "failed", slog.Any("error", err))
+		toolkitlogger.Flush()
 		os.Exit(1)
 	}
 }
