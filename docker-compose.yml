@@ -11,6 +11,9 @@ services:
       - .env
     environment:
       GATEWAY_SERVER_PORT: ${GATEWAY_SERVER_PORT:-8080}
+      SERVICES_TENANT_URL: http://tenant:${TENANT_SERVER_PORT:-8082}/api
+      SERVICES_GUARDRAIL_URL: http://guardrails:${GUARDRAIL_SERVER_PORT:-8083}/api
+      SERVICES_OBSERVABILITY_URL: http://observability:${OBSERVABILITY_SERVER_PORT:-8084}/api
     ports:
       - "${GATEWAY_SERVER_PORT:-8080}:${GATEWAY_SERVER_PORT:-8080}"
     depends_on:
@@ -47,6 +50,7 @@ services:
       - .env
     environment:
       GUARDRAIL_SERVER_PORT: ${GUARDRAIL_SERVER_PORT:-8083}
+      SERVICES_TENANT_URL: http://tenant:${TENANT_SERVER_PORT:-8082}/api
     ports:
       - "${GUARDRAIL_SERVER_PORT:-8083}:${GUARDRAIL_SERVER_PORT:-8083}"
     depends_on:

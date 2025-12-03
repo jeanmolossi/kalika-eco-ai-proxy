@@ -15,7 +15,7 @@ type tenantClient struct {
 	baseURL string
 }
 
-func newTenantClient(client *http.Client, baseURL string) tenantStore {
+func newTenantClient(client *http.Client, baseURL string) pkgtenant.Store {
 	return &tenantClient{client: client, baseURL: baseURL}
 }
 

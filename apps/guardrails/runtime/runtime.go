@@ -4,6 +4,7 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/remote"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
@@ -11,6 +12,7 @@ import (
 // Registry wires the modules required to run the guardrails service.
 func Registry() core.Registry {
 	return core.NewRegistry(
+		remote.NewModule(),
 		database.NewModule(),
 		guardrails.NewModule(),
 	)
