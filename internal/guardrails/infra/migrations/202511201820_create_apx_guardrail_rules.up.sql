@@ -4,7 +4,7 @@ BEGIN;
 
 CREATE TABLE apx.guardrail_rules (
   id             UUID PRIMARY KEY DEFAULT uuidv7(),
-  tenant_id      UUID NOT NULL,
+  tenant_id      UUID NOT NULL REFERENCES apx.tenants(id) ON DELETE CASCADE,
   name           TEXT NOT NULL,
   kind           apx.guardrail_kind NOT NULL,
   is_active      BOOLEAN NOT NULL DEFAULT TRUE,
