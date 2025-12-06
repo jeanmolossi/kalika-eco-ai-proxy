@@ -3,7 +3,7 @@ package runtime
 import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant"
+	tenantmodule "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/module"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 )
@@ -12,7 +12,7 @@ import (
 func Registry() core.Registry {
 	return core.NewRegistry(
 		database.NewTenantModule(),
-		tenant.NewModule(),
+		tenantmodule.NewModule(),
 	)
 }
 

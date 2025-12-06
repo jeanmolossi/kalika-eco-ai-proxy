@@ -1,5 +1,10 @@
 # Módulos do Monorepo
 
+## Padrão Organizacional
+- Cada módulo expõe uma struct `Deps` em `deps.go` para registrar contratos no `core.Container` e reutilizar wiring em rotas/startup (modelo implementado no `gateway` e replicado em `guardrails`, `tenant` e `observability`).
+- Handlers vivem em `infra/http` e só dependem das interfaces públicas da `Deps`, nunca de adapters de outros módulos.
+- `module.go` é responsável por criar `Deps`, armazená-la na chave `<modulo>:deps` e registrar rotas/migrations, mantendo a ordem de inicialização via `Weight`.
+
 ## Gateway
 - **Responsabilidade:** plano de dados HTTP para proxy de LLMs, rate-limit, cache e guardrails.
 - **Boundaries:** consome `TenantStore`, `GuardrailEngine`, `Limiter`, `SemanticCache`, `Router`. Não lê banco de outros módulos.
