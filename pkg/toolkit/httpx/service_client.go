@@ -111,9 +111,6 @@ func newRetryConfig(opts ServiceClientOptions) retry.RetryConfig {
 		AllowedMethods: map[string]bool{
 			http.MethodGet:     true,
 			http.MethodHead:    true,
-			http.MethodPost:    true,
-			http.MethodPut:     true,
-			http.MethodDelete:  true,
 			http.MethodOptions: true,
 			http.MethodTrace:   true,
 		},
