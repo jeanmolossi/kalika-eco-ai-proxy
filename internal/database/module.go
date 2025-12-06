@@ -37,6 +37,7 @@ func NewModule(opt ModuleOptions) core.Module {
 	if opt.Name == "" {
 		opt.Name = ModuleName
 	}
+
 	if opt.ConnKey == "" {
 		panic("database module requires ConnKey")
 	}

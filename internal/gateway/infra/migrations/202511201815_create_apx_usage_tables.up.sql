@@ -4,6 +4,12 @@ BEGIN;
 
 CREATE SCHEMA IF NOT EXISTS apx;
 
+-- Replica mínima de tenants para manter referencial local no gateway.
+-- Alimentada via eventos assíncronos (ex.: Kafka) pelo serviço de tenants.
+CREATE TABLE IF NOT EXISTS apx.tenants (
+  id UUID PRIMARY KEY
+);
+
 CREATE TABLE apx.usage_events (
   id                 BIGSERIAL PRIMARY KEY,
   occurred_at        TIMESTAMPTZ NOT NULL DEFAULT now(),

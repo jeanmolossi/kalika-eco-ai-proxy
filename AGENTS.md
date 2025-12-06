@@ -2,6 +2,7 @@
 
 ## Tooling Requirements
 - Use **GolangCI-Lint >= 2.6.2** and **Go >= 1.25**. Any downgrade of these tools is forbidden unless explicitly requested.
+- Before running `golangci-lint`, always follow the installation guide below to guarantee Go 1.25+ and golangci-lint 2.6.2+ are installed and active on your PATH.
 
 ## Configuration Hygiene
 - Always update `.env.example` whenever environment variables are added, removed, or renamed in the configuration to keep sample settings in sync with the codebase.

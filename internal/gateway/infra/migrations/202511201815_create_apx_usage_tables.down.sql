@@ -3,4 +3,5 @@
 BEGIN;
 DROP TABLE IF EXISTS apx.usage_daily;
 DROP TABLE IF EXISTS apx.usage_events;
+DROP TABLE IF EXISTS apx.tenants;
 END;
