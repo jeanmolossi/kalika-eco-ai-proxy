@@ -14,7 +14,7 @@ services:
 
   kafka:
     container_name: ai-proxy-kafka
-    image: confluentinc/cp-kafka:7.6.1
+    image: confluentinc/cp-kafka:7.9.5
     depends_on:
       - zookeeper
     ports:
