@@ -12,9 +12,9 @@ services:
     environment:
       GATEWAY_SERVER_PORT: ${GATEWAY_SERVER_PORT:-8080}
       GATEWAY_POSTGRES_DB: ${GATEWAY_POSTGRES_DB:-ai_proxy_gateway}
-      SERVICES_TENANT_URL: http://tenant:${TENANT_SERVER_PORT:-8082}/api
-      SERVICES_GUARDRAIL_URL: http://guardrails:${GUARDRAIL_SERVER_PORT:-8083}/api
-      SERVICES_OBSERVABILITY_URL: http://observability:${OBSERVABILITY_SERVER_PORT:-8084}/api
+      SERVICES_TENANT_URL: https://tenant:${TENANT_SERVER_PORT:-8082}/api
+      SERVICES_GUARDRAIL_URL: https://guardrails:${GUARDRAIL_SERVER_PORT:-8083}/api
+      SERVICES_OBSERVABILITY_URL: https://observability:${OBSERVABILITY_SERVER_PORT:-8084}/api
       SERVICES_AUTH_TOKEN: ${SERVICES_AUTH_TOKEN:-dev-shared-secret}
     ports:
       - "${GATEWAY_SERVER_PORT:-8080}:${GATEWAY_SERVER_PORT:-8080}"
@@ -28,7 +28,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -f http://localhost:${GATEWAY_SERVER_PORT:-8080}/api/healthz || exit 1",
+          "curl --fail --cacert /app/cert.pem https://localhost:${GATEWAY_SERVER_PORT:-8080}/api/healthz || exit 1",
         ]
       interval: 30s
       timeout: 10s
@@ -59,7 +59,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -f http://localhost:${TENANT_SERVER_PORT:-8082}/api/healthz || exit 1",
+          "curl --fail --cacert /app/cert.pem https://localhost:${TENANT_SERVER_PORT:-8082}/api/healthz || exit 1",
         ]
       interval: 30s
       timeout: 10s
@@ -74,11 +74,11 @@ services:
       dockerfile: Dockerfile.dev
     env_file:
       - .env
-    environment:
-      GUARDRAIL_SERVER_PORT: ${GUARDRAIL_SERVER_PORT:-8083}
-      GUARDRAIL_POSTGRES_DB: ${GUARDRAIL_POSTGRES_DB:-ai_proxy_guardrails}
-      SERVICES_TENANT_URL: http://tenant:${TENANT_SERVER_PORT:-8082}/api
-      SERVICES_AUTH_TOKEN: ${SERVICES_AUTH_TOKEN:-dev-shared-secret}
+      environment:
+        GUARDRAIL_SERVER_PORT: ${GUARDRAIL_SERVER_PORT:-8083}
+        GUARDRAIL_POSTGRES_DB: ${GUARDRAIL_POSTGRES_DB:-ai_proxy_guardrails}
+        SERVICES_TENANT_URL: https://tenant:${TENANT_SERVER_PORT:-8082}/api
+        SERVICES_AUTH_TOKEN: ${SERVICES_AUTH_TOKEN:-dev-shared-secret}
     ports:
       - "${GUARDRAIL_SERVER_PORT:-8083}:${GUARDRAIL_SERVER_PORT:-8083}"
     depends_on:
@@ -91,7 +91,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -f http://localhost:${GUARDRAIL_SERVER_PORT:-8083}/api/healthz || exit 1",
+          "curl --fail --cacert /app/cert.pem https://localhost:${GUARDRAIL_SERVER_PORT:-8083}/api/healthz || exit 1",
         ]
       interval: 30s
       timeout: 10s
@@ -122,7 +122,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -f http://localhost:${OBSERVABILITY_SERVER_PORT:-8084}/api/healthz || exit 1",
+          "curl --fail --cacert /app/cert.pem https://localhost:${OBSERVABILITY_SERVER_PORT:-8084}/api/healthz || exit 1",
         ]
       interval: 30s
       timeout: 10s

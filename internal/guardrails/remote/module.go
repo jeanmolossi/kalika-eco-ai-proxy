@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
@@ -26,7 +27,7 @@ func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	conf := c.Config()
 
-	clientHTTP := httpx.NewServiceHTTPClient(httpx.ServiceClientOptions{
+	clientHTTP, err := httpx.NewServiceHTTPClient(httpx.ServiceClientOptions{
 		Timeout:    conf.Services.RequestTimeout,
 		MaxRetries: conf.Services.MaxRetries,
 		Breaker: httpx.CircuitBreakerConfig{
@@ -34,7 +35,11 @@ func (m *module) Provide(_ context.Context, c *core.Container) error {
 			ResetTimeout: conf.Services.CircuitReset,
 			Interval:     conf.Services.CircuitInterval,
 		},
+		CACertFile: conf.Services.CACertFile,
 	})
+	if err != nil {
+		return fmt.Errorf("create service http client: %w", err)
+	}
 
 	token := strings.TrimSpace(conf.Services.AuthToken)
 

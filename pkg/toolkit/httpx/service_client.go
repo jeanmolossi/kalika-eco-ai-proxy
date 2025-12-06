@@ -1,7 +1,11 @@
 package httpx
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
@@ -24,23 +28,60 @@ type ServiceClientOptions struct {
 	Timeout    time.Duration
 	MaxRetries int
 	Breaker    CircuitBreakerConfig
+	CACertFile string
 }
 
 // NewServiceHTTPClient wires retry and circuit-breaker protections for
 // inter-service HTTP calls.
-func NewServiceHTTPClient(opts ServiceClientOptions) *http.Client {
+func NewServiceHTTPClient(opts ServiceClientOptions) (*http.Client, error) {
 	breaker := newCircuitBreaker(opts.Breaker)
-	baseTransport := http.DefaultTransport
+	transport := cloneDefaultTransport()
+
+	if opts.CACertFile != "" {
+		caPool, err := loadRootCAs(opts.CACertFile)
+		if err != nil {
+			return nil, fmt.Errorf("load root CAs: %w", err)
+		}
+
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+
+		transport.TLSClientConfig.RootCAs = caPool
+	}
 
 	retryClient := retryablehttp.NewClient()
-	retryClient.HTTPClient.Transport = &breakerRoundTripper{next: baseTransport, breaker: breaker}
+	retryClient.HTTPClient.Transport = &breakerRoundTripper{next: transport, breaker: breaker}
 	retryClient.HTTPClient.Timeout = opts.Timeout
 
 	if opts.MaxRetries > 0 {
 		retryClient.RetryMax = opts.MaxRetries
 	}
 
-	return retryClient.StandardClient()
+	return retryClient.StandardClient(), nil
+}
+
+func cloneDefaultTransport() *http.Transport {
+	if base, ok := http.DefaultTransport.(*http.Transport); ok {
+		return base.Clone()
+	}
+
+	return &http.Transport{}
+}
+
+func loadRootCAs(caFile string) (*x509.CertPool, error) {
+	data, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, fmt.Errorf("read ca file %s: %w", caFile, err)
+	}
+
+	pool := x509.NewCertPool()
+
+	if ok := pool.AppendCertsFromPEM(data); !ok {
+		return nil, fmt.Errorf("no certificates appended from %s", caFile)
+	}
+
+	return pool, nil
 }
 
 func newCircuitBreaker(cfg CircuitBreakerConfig) *gobreaker.CircuitBreaker[*http.Response] {
