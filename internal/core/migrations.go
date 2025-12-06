@@ -62,6 +62,10 @@ func RunAllMigrations(ctx context.Context, db *sql.DB, modules []Module) error {
 		all = append(all, migs...)
 	}
 
+	if len(all) == 0 {
+		return nil
+	}
+
 	src, err := newMemorySource(all)
 	if err != nil {
 		return fmt.Errorf("build memory source: %w", err)
