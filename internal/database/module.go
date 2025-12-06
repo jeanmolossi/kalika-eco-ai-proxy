@@ -105,7 +105,7 @@ func (m *module) Provide(ctx context.Context, c *core.Container) error {
 		return fmt.Errorf("%s: missing postgres selector", m.name)
 	}
 
-	dbCfg := m.selector(c.Config())
+	dbCfg := m.selector(c.Config()).WithDefaultsFrom(c.Config().PgDB)
 	if dbCfg.DSN == "" && dbCfg.Database.Database == "" {
 		return fmt.Errorf("%s: postgres configuration is empty", m.name)
 	}

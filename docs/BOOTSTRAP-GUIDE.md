@@ -14,6 +14,7 @@
    ```
 2. **Configure variáveis de ambiente específicas**
    - Copie `.env.example` para `.env` e ajuste DSNs por módulo: `GATEWAY_POSTGRES_DSN`, `TENANT_POSTGRES_DSN`, `GUARDRAIL_POSTGRES_DSN`, `OBSERVABILITY_POSTGRES_DSN`.
+   - Configure `POSTGRES_*` (host, porta, usuário, senha, SSL e timeouts) para servir de padrão compartilhado quando `*_POSTGRES_*` não estiverem completos; em Docker Compose o host deve ser `postgres-master`.
    - Defina servidores com `GATEWAY_SERVER_*`, `TENANT_SERVER_*`, `GUARDRAIL_SERVER_*`, `OBSERVABILITY_SERVER_*` (evite reuso de portas ao subir múltiplos serviços).
    - `SERVER_*` também controla `BASE_PATH`, TLS (`SERVER_ENABLE_TLS`, `SERVER_TLS_CERTFILE`, `SERVER_TLS_KEYFILE`) e pprof (`SERVER_ENABLE_PPROF`).
    - Ajuste sinks de uso/auditoria: `USAGE_MODE`/`AUDIT_MODE` (`file` ou `kafka`), `USAGE_TOPIC`/`AUDIT_TOPIC` e `KAFKA_BROKERS` quando Kafka estiver habilitado.
