@@ -6,7 +6,7 @@ import (
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
-	"github.com/sony/gobreaker"
+	"github.com/sony/gobreaker/v2"
 )
 
 // CircuitBreakerConfig defines the thresholds used by the circuit-breaker
@@ -43,7 +43,7 @@ func NewServiceHTTPClient(opts ServiceClientOptions) *http.Client {
 	return retryClient.StandardClient()
 }
 
-func newCircuitBreaker(cfg CircuitBreakerConfig) *gobreaker.CircuitBreaker {
+func newCircuitBreaker(cfg CircuitBreakerConfig) *gobreaker.CircuitBreaker[*http.Response] {
 	failures := cfg.Failures
 	if failures == 0 {
 		failures = 5
@@ -59,7 +59,7 @@ func newCircuitBreaker(cfg CircuitBreakerConfig) *gobreaker.CircuitBreaker {
 		interval = 2 * time.Minute
 	}
 
-	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
+	return gobreaker.NewCircuitBreaker[*http.Response](gobreaker.Settings{
 		Name:     "service-http",
 		Timeout:  resetTimeout,
 		Interval: interval,
@@ -71,27 +71,17 @@ func newCircuitBreaker(cfg CircuitBreakerConfig) *gobreaker.CircuitBreaker {
 
 type breakerRoundTripper struct {
 	next    http.RoundTripper
-	breaker *gobreaker.CircuitBreaker
+	breaker *gobreaker.CircuitBreaker[*http.Response]
 }
 
 func (b *breakerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	result, err := b.breaker.Execute(func() (interface{}, error) {
+	return b.breaker.Execute(func() (*http.Response, error) {
 		return b.next.RoundTrip(req)
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	resp, ok := result.(*http.Response)
-	if !ok {
-		return nil, http.ErrUseLastResponse
-	}
-
-	return resp, nil
 }
 
-// AsMaigoHTTPClient adapts a standard *http.Client to the maigocontracts.HTTPClient interface.
-func AsMaigoHTTPClient(client *http.Client) maigocontracts.HTTPClient {
+// AsMaigoHTTPClient adapts a standard *http.Client to the maigocontracts.HTTPClientCompat interface.
+func AsMaigoHTTPClient(client *http.Client) maigocontracts.HTTPClientCompat {
 	return &maigoHTTPClient{client: client}
 }
 
@@ -128,4 +118,8 @@ func (m *maigoHTTPClient) SetFollowRedirects(follow bool) {
 	m.client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
+}
+
+func (m *maigoHTTPClient) Unwrap() *http.Client {
+	return m.client
 }

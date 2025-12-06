@@ -12,7 +12,7 @@ require (
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/segmentio/kafka-go v0.4.49
-	github.com/sony/gobreaker v1.0.0
+	github.com/sony/gobreaker/v2 v2.3.0
 	github.com/tmc/langchaingo v0.1.14
 	go.opentelemetry.io/otel v1.38.0
 	go.opentelemetry.io/otel/metric v1.38.0
