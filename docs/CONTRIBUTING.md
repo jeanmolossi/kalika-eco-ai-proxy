@@ -14,7 +14,7 @@
 - **Templates e ADRs:** `docs/templates/`, `docs/decisions/`.
 
 ## Padrões de código
-- Siga `docs/styleguide/go.md`, `docs/styleguide/sql.md` e `docs/styleguide/typescript.md`.
+- Siga `docs/styleguide/GO.md`, `docs/styleguide/SQL.md` e `docs/styleguide/typescript.md`.
 - Context obrigatório em qualquer operação I/O. Timeout vindo da config.
 - Erros sempre com wrapping (`fmt.Errorf("action: %w", err)`).
 - Nenhum handler retorna panics; valide inputs e retorne erros estruturados.

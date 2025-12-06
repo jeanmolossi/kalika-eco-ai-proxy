@@ -3,7 +3,7 @@ package runtime
 import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
+	guardrailsmodule "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/module"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/remote"
 	toolkitconfig "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
@@ -14,7 +14,7 @@ func Registry() core.Registry {
 	return core.NewRegistry(
 		remote.NewModule(),
 		database.NewGuardrailModule(),
-		guardrails.NewModule(),
+		guardrailsmodule.NewModule(),
 	)
 }
 

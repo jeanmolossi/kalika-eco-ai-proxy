@@ -1,21 +1,21 @@
-package tenant
+package tenantmodule
 
 import (
 	"context"
 	"database/sql"
-	"net/http"
+	"log/slog"
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/infra"
+	tenanthttp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/infra/http"
 	"github.com/labstack/echo/v4"
 )
 
 const ModuleName = "tenant"
 
-// module wires tenant storage and background maintenance tasks.
 type module struct{}
 
 // NewModule creates the tenant module.
@@ -23,46 +23,33 @@ func NewModule() core.Module { return &module{} }
 
 func (m *module) Name() string { return ModuleName }
 func (m *module) Weight() int  { return 2 }
+
 func (m *module) Routes(g *echo.Group, c *core.Container) error {
-	store := core.MustGet[Store](c, core.TenantStoreModule)
+	log := c.Logger()
+	log.Info("tenant: registering routes")
 
-	g.GET("/tenants/:tenantID", func(ctx echo.Context) error {
-		tenantID := ctx.Param("tenantID")
+	deps := MustDepsFromContainer(c)
+	handlers := tenanthttp.NewHandlers(deps.Store)
 
-		tenant, err := store.FindByID(ctx.Request().Context(), tenantID)
-		if err != nil {
-			if err == ErrNotFound {
-				return ctx.NoContent(http.StatusNotFound)
-			}
-
-			return err
-		}
-
-		return ctx.JSON(http.StatusOK, tenant)
-	})
-
-	g.GET("/tenants/api-keys/:apiKey", func(ctx echo.Context) error {
-		apiKey := ctx.Param("apiKey")
-
-		tenant, err := store.FindByAPIKey(ctx.Request().Context(), apiKey)
-		if err != nil {
-			switch err {
-			case ErrInvalidAPIKey, ErrNotFound, ErrInactiveTenant:
-				return ctx.NoContent(http.StatusNotFound)
-			default:
-				return err
-			}
-		}
-
-		return ctx.JSON(http.StatusOK, tenant)
-	})
+	tenanthttp.RegisterRoutes(g, handlers)
 
 	return nil
 }
 
-func (m *module) Provide(_ context.Context, c *core.Container) error {
-	conn := core.MustGet[*pg.DB](c, database.TenantConn)
-	c.Set(core.TenantStoreModule, NewPostgresStore(conn.Pool()))
+func (m *module) Provide(ctx context.Context, c *core.Container) error {
+	log := c.Logger()
+	cfg := c.Config()
+
+	log.Info("tenant: providing dependencies", slog.String("env", cfg.Environment.String()))
+
+	deps, err := buildDependencies(c)
+	if err != nil {
+		return err
+	}
+
+	c.Set(DepsKey, deps)
+	c.Set(core.TenantStoreModule, deps.Store)
+
 	return nil
 }
 
@@ -73,7 +60,7 @@ func (m *module) MigrationDB(_ context.Context, c *core.Container) (*sql.DB, err
 }
 
 func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Context) error, error) {
-	store := core.MustGet[Store](c, core.TenantStoreModule)
+	deps := MustDepsFromContainer(c)
 	log := c.Logger()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -92,7 +79,7 @@ func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Con
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if revoked, err := store.RevokeExpired(ctx); err != nil {
+				if revoked, err := deps.Store.RevokeExpired(ctx); err != nil {
 					log.ErrorContext(ctx, "api key revocation", "err", err)
 				} else if revoked > 0 {
 					log.InfoContext(ctx, "revoked expired api keys", "count", revoked)
@@ -115,4 +102,16 @@ func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Con
 
 func (m *module) Migrations(ctx context.Context, c *core.Container) ([]core.MigrationFile, error) {
 	return infra.Migrations(ctx, m)
+}
+
+// MustDepsFromContainer retrieves tenant dependencies or panics.
+func MustDepsFromContainer(c *core.Container) Deps {
+	v := c.MustGet(DepsKey)
+
+	deps, ok := v.(Deps)
+	if !ok {
+		panic("tenant: invalid deps type stored in container")
+	}
+
+	return deps
 }
