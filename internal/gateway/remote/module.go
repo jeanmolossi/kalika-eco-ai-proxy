@@ -34,9 +34,8 @@ func (m *module) Provide(_ context.Context, c *core.Container) error {
 		Timeout:    conf.Services.RequestTimeout,
 		MaxRetries: conf.Services.MaxRetries,
 		Breaker: httpx.CircuitBreakerConfig{
-			Failures:     uint32(conf.Services.CircuitFailures),
-			ResetTimeout: conf.Services.CircuitReset,
-			Interval:     conf.Services.CircuitInterval,
+			FailureThreshold: int(conf.Services.CircuitFailures),
+			RecoveryWindow:   conf.Services.CircuitReset,
 		},
 		CACertFile: conf.Services.CACertFile,
 	})

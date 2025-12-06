@@ -9,13 +9,21 @@ import (
 	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
+	maigohttpx "github.com/jeanmolossi/maigo/pkg/httpx"
+	"github.com/jeanmolossi/maigo/pkg/httpx/circuitbreaker"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
-	"github.com/sony/gobreaker/v2"
 )
 
 // CircuitBreakerConfig defines the thresholds used by the circuit-breaker
 // transport for inter-service calls.
 type CircuitBreakerConfig struct {
+	FailureThreshold int
+	RecoveryWindow   time.Duration
+	ShouldTrip       func(*http.Response, error) bool
+
+	// Deprecated compatibility fields kept to smooth migration from the previous
+	// gobreaker implementation. Prefer using FailureThreshold/RecoveryWindow
+	// above instead.
 	Failures     uint32
 	ResetTimeout time.Duration
 	Interval     time.Duration
@@ -34,8 +42,7 @@ type ServiceClientOptions struct {
 // NewServiceHTTPClient wires retry and circuit-breaker protections for
 // inter-service HTTP calls.
 func NewServiceHTTPClient(opts ServiceClientOptions) (*http.Client, error) {
-	breaker := newCircuitBreaker(opts.Breaker)
-	transport := cloneDefaultTransport()
+	baseTransport := cloneDefaultTransport()
 
 	if opts.CACertFile != "" {
 		caPool, err := loadRootCAs(opts.CACertFile)
@@ -43,15 +50,17 @@ func NewServiceHTTPClient(opts ServiceClientOptions) (*http.Client, error) {
 			return nil, fmt.Errorf("load root CAs: %w", err)
 		}
 
-		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+		if baseTransport.TLSClientConfig == nil {
+			baseTransport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 		}
 
-		transport.TLSClientConfig.RootCAs = caPool
+		baseTransport.TLSClientConfig.RootCAs = caPool
 	}
 
+	transport := maigohttpx.Compose(baseTransport, circuitbreaker.WithCircuitBreaker(newCircuitBreakerConfig(opts.Breaker)))
+
 	retryClient := retryablehttp.NewClient()
-	retryClient.HTTPClient.Transport = &breakerRoundTripper{next: transport, breaker: breaker}
+	retryClient.HTTPClient.Transport = transport
 	retryClient.HTTPClient.Timeout = opts.Timeout
 
 	if opts.MaxRetries > 0 {
@@ -84,41 +93,30 @@ func loadRootCAs(caFile string) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-func newCircuitBreaker(cfg CircuitBreakerConfig) *gobreaker.CircuitBreaker[*http.Response] {
-	failures := cfg.Failures
-	if failures == 0 {
-		failures = 5
+func newCircuitBreakerConfig(cfg CircuitBreakerConfig) circuitbreaker.CircuitBreakerConfig {
+	failureThreshold := cfg.FailureThreshold
+	if failureThreshold == 0 {
+		failureThreshold = int(cfg.Failures)
 	}
 
-	resetTimeout := cfg.ResetTimeout
-	if resetTimeout == 0 {
-		resetTimeout = 30 * time.Second
+	if failureThreshold == 0 {
+		failureThreshold = 5
 	}
 
-	interval := cfg.Interval
-	if interval == 0 {
-		interval = 2 * time.Minute
+	recoveryWindow := cfg.RecoveryWindow
+	if recoveryWindow == 0 {
+		recoveryWindow = cfg.ResetTimeout
 	}
 
-	return gobreaker.NewCircuitBreaker[*http.Response](gobreaker.Settings{
-		Name:     "service-http",
-		Timeout:  resetTimeout,
-		Interval: interval,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			return counts.ConsecutiveFailures >= failures
-		},
-	})
-}
+	if recoveryWindow == 0 {
+		recoveryWindow = 30 * time.Second
+	}
 
-type breakerRoundTripper struct {
-	next    http.RoundTripper
-	breaker *gobreaker.CircuitBreaker[*http.Response]
-}
-
-func (b *breakerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return b.breaker.Execute(func() (*http.Response, error) {
-		return b.next.RoundTrip(req)
-	})
+	return circuitbreaker.CircuitBreakerConfig{
+		FailureThreshold: failureThreshold,
+		RecoveryWindow:   recoveryWindow,
+		ShouldTrip:       cfg.ShouldTrip,
+	}
 }
 
 // AsMaigoHTTPClient adapts a standard *http.Client to the maigocontracts.HTTPClientCompat interface.
