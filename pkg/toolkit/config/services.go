@@ -16,5 +16,4 @@ type Services struct {
 	MaxRetries      int           `env:"MAX_RETRIES"      envDefault:"3"`
 	CircuitFailures uint32        `env:"CIRCUIT_FAILURES" envDefault:"5"`
 	CircuitReset    time.Duration `env:"CIRCUIT_RESET"    envDefault:"30s"`
-	CircuitInterval time.Duration `env:"CIRCUIT_INTERVAL" envDefault:"2m"`
 }

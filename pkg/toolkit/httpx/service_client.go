@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
-	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	maigohttpx "github.com/jeanmolossi/maigo/pkg/httpx"
 	"github.com/jeanmolossi/maigo/pkg/httpx/circuitbreaker"
+	"github.com/jeanmolossi/maigo/pkg/httpx/retry"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
 )
 
@@ -20,13 +20,6 @@ type CircuitBreakerConfig struct {
 	FailureThreshold int
 	RecoveryWindow   time.Duration
 	ShouldTrip       func(*http.Response, error) bool
-
-	// Deprecated compatibility fields kept to smooth migration from the previous
-	// gobreaker implementation. Prefer using FailureThreshold/RecoveryWindow
-	// above instead.
-	Failures     uint32
-	ResetTimeout time.Duration
-	Interval     time.Duration
 }
 
 // ServiceClientOptions bundles resilience settings for HTTP clients that talk
@@ -57,17 +50,13 @@ func NewServiceHTTPClient(opts ServiceClientOptions) (*http.Client, error) {
 		baseTransport.TLSClientConfig.RootCAs = caPool
 	}
 
-	transport := maigohttpx.Compose(baseTransport, circuitbreaker.WithCircuitBreaker(newCircuitBreakerConfig(opts.Breaker)))
+	transport := maigohttpx.Compose(
+		baseTransport,
+		circuitbreaker.WithCircuitBreaker(newCircuitBreakerConfig(opts.Breaker)),
+		retry.WithRetry(newRetryConfig(opts)),
+	)
 
-	retryClient := retryablehttp.NewClient()
-	retryClient.HTTPClient.Transport = transport
-	retryClient.HTTPClient.Timeout = opts.Timeout
-
-	if opts.MaxRetries > 0 {
-		retryClient.RetryMax = opts.MaxRetries
-	}
-
-	return retryClient.StandardClient(), nil
+	return &http.Client{Transport: transport, Timeout: opts.Timeout}, nil
 }
 
 func cloneDefaultTransport() *http.Transport {
@@ -96,18 +85,10 @@ func loadRootCAs(caFile string) (*x509.CertPool, error) {
 func newCircuitBreakerConfig(cfg CircuitBreakerConfig) circuitbreaker.CircuitBreakerConfig {
 	failureThreshold := cfg.FailureThreshold
 	if failureThreshold == 0 {
-		failureThreshold = int(cfg.Failures)
-	}
-
-	if failureThreshold == 0 {
 		failureThreshold = 5
 	}
 
 	recoveryWindow := cfg.RecoveryWindow
-	if recoveryWindow == 0 {
-		recoveryWindow = cfg.ResetTimeout
-	}
-
 	if recoveryWindow == 0 {
 		recoveryWindow = 30 * time.Second
 	}
@@ -116,6 +97,26 @@ func newCircuitBreakerConfig(cfg CircuitBreakerConfig) circuitbreaker.CircuitBre
 		FailureThreshold: failureThreshold,
 		RecoveryWindow:   recoveryWindow,
 		ShouldTrip:       cfg.ShouldTrip,
+	}
+}
+
+func newRetryConfig(opts ServiceClientOptions) retry.RetryConfig {
+	maxAttempts := opts.MaxRetries
+	if maxAttempts > 0 {
+		maxAttempts++ // align with retryablehttp, where RetryMax excludes the first try
+	}
+
+	return retry.RetryConfig{
+		MaxAttempts: maxAttempts,
+		AllowedMethods: map[string]bool{
+			http.MethodGet:     true,
+			http.MethodHead:    true,
+			http.MethodPost:    true,
+			http.MethodPut:     true,
+			http.MethodDelete:  true,
+			http.MethodOptions: true,
+			http.MethodTrace:   true,
+		},
 	}
 }
 
