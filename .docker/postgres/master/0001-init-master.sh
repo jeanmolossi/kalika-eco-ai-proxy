@@ -65,16 +65,16 @@ END
 SQL
 
 create_db_if_missing() {
-        local dbname="$1"
+	local dbname="$1"
 
-        if [ -z "$dbname" ]; then
-                return
-        fi
+	if [ -z "$dbname" ]; then
+		return
+	fi
 
-        if ! psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$dbname'" | grep -q 1; then
-                echo "[*] Criando database '$dbname'…"
-                psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$dbname\" OWNER $POSTGRES_USER;"
-        fi
+	if ! psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$dbname'" | grep -q 1; then
+		echo "[*] Criando database '$dbname'…"
+		psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$dbname\" OWNER $POSTGRES_USER;"
+	fi
 }
 
 create_db_if_missing "$POSTGRES_DB"
