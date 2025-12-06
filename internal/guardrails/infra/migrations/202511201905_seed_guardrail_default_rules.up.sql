@@ -42,7 +42,7 @@ INSERT INTO apx.guardrail_rules (
   jsonb_build_object(
     'phase', 'input',
     'action', 'rewrite',
-    'pattern', '\b\d{3}\.\d{3}\.\d{3}\-\d{2}\\b',
+    'pattern', '\b\d{3}\.\d{3}\.\d{3}\-\d{2}\b',
     'replacement', '***-CPF-REDACTED***',
     'severity', 'medium',
     'tags', jsonb_build_array('pii')

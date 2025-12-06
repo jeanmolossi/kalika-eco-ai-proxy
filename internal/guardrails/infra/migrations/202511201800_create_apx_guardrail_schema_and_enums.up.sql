@@ -16,7 +16,9 @@ VALUES ('11111111-1111-1111-1111-111111111111'::uuid)
 ON CONFLICT (id) DO NOTHING;
 
 CREATE TYPE apx.guardrail_kind AS ENUM (
+  'regex_rewrite',
   'regex_block',
+  'max_length',
   'prompt_guard',
   'allowlist',
   'denylist',
