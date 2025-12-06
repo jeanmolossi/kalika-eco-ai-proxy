@@ -3,14 +3,15 @@ package remote
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/guardrails"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/observability"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/httpx"
 	"github.com/jeanmolossi/maigo/pkg/maigo"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
+	"github.com/jeanmolossi/maigo/pkg/maigo/header"
 	"github.com/labstack/echo/v4"
 )
 
@@ -28,10 +29,29 @@ func (m *module) Routes(_ *echo.Group, _ *core.Container) error { return nil }
 func (m *module) Provide(_ context.Context, c *core.Container) error {
 	conf := c.Config()
 
+	clientHTTP := httpx.NewServiceHTTPClient(httpx.ServiceClientOptions{
+		Timeout:    conf.Services.RequestTimeout,
+		MaxRetries: conf.Services.MaxRetries,
+		Breaker: httpx.CircuitBreakerConfig{
+			Failures:     uint32(conf.Services.CircuitFailures),
+			ResetTimeout: conf.Services.CircuitReset,
+			Interval:     conf.Services.CircuitInterval,
+		},
+	})
+
+	token := strings.TrimSpace(conf.Services.AuthToken)
+
 	newClient := func(baseURL string) maigocontracts.ClientHTTPMethods {
-		return maigo.NewClient(strings.TrimSuffix(baseURL, "/")).Config().
-			SetTimeout(10 * time.Second).
-			Build()
+		clientBuilder := maigo.NewClient(strings.TrimSuffix(baseURL, "/"))
+		configBuilder := clientBuilder.Config()
+		configBuilder.SetCustomHTTPClient(httpx.AsMaigoHTTPClient(clientHTTP))
+		configBuilder.SetTimeout(conf.Services.RequestTimeout)
+
+		if token != "" {
+			clientBuilder.Header().Set(header.Authorization, "Bearer "+token)
+		}
+
+		return clientBuilder.Build()
 	}
 
 	c.Set(core.TenantStoreModule, newTenantClient(newClient(conf.Services.TenantURL)))
