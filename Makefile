@@ -31,7 +31,7 @@ docker-build: ## Build and run Docker compose for development
 
 docker-up: ## Start Docker compose services
 	@docker compose up -d
-	@docker compose logs -f gateway
+	@docker compose logs -f gateway tenant guardrails observability
 
 docker-down: ## Stop docker compose services
 	@docker compose down
