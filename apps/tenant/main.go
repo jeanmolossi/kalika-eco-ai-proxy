@@ -17,7 +17,6 @@ func main() {
 	cfg := toolkitconfig.Load()
 	log := toolkitlogger.New().With("service", "tenant")
 	app := core.NewApp(log)
-	cfg.PgDB = toolkitconfig.ChoosePostgres(cfg.TenantDB, cfg.PgDB)
 
 	defer toolkitlogger.Flush()
 

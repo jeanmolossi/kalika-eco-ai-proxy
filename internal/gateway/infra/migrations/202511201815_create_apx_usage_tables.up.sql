@@ -2,11 +2,13 @@
 
 BEGIN;
 
+CREATE SCHEMA IF NOT EXISTS apx;
+
 CREATE TABLE apx.usage_events (
   id                 BIGSERIAL PRIMARY KEY,
   occurred_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   request_id         UUID NOT NULL,
-  tenant_id          UUID NOT NULL REFERENCES apx.tenants(id) ON DELETE CASCADE,
+  tenant_id          UUID NOT NULL,
   user_id            TEXT,
   model              TEXT NOT NULL,
   provider           TEXT NOT NULL,           -- "openai", "anthropic", "local"
@@ -27,7 +29,7 @@ CREATE INDEX idx_usage_events_model_time
 CREATE TABLE apx.usage_daily (
   id                 BIGSERIAL PRIMARY KEY,
   day                DATE NOT NULL,
-  tenant_id          UUID NOT NULL REFERENCES apx.tenants(id) ON DELETE CASCADE,
+  tenant_id          UUID NOT NULL,
   model              TEXT NOT NULL,
   provider           TEXT NOT NULL,
   total_requests     BIGINT NOT NULL DEFAULT 0,

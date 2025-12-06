@@ -1,5 +1,7 @@
 -- 202511201900_refine_guardrail_rules.down.sql
 
+DROP FUNCTION IF EXISTS apx.default_tenant_id();
+
 ALTER TABLE apx.guardrail_rules
     DROP COLUMN IF EXISTS description,
     DROP COLUMN IF EXISTS tags,
@@ -8,4 +10,3 @@ ALTER TABLE apx.guardrail_rules
     DROP COLUMN IF EXISTS updated_at;
 
 DROP TYPE IF EXISTS apx.guardrail_severity;
-

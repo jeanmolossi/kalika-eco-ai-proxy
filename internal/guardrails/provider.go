@@ -14,7 +14,7 @@ func ProvideGuardrails(c *core.Container) Engine {
 		return NewNoopGuardrails()
 	}
 
-	db := core.MustGet[*pg.DB](c, database.PgConn)
+	db := core.MustGet[*pg.DB](c, database.GuardrailConn)
 
 	repo := NewPGRuleRepository(db.Pool())
 	sink := NewLoggerSink(logger)

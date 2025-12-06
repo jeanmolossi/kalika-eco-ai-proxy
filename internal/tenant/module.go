@@ -2,12 +2,14 @@ package tenant
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/infra"
 	"github.com/labstack/echo/v4"
 )
 
@@ -59,9 +61,15 @@ func (m *module) Routes(g *echo.Group, c *core.Container) error {
 }
 
 func (m *module) Provide(_ context.Context, c *core.Container) error {
-	conn := core.MustGet[*pg.DB](c, database.PgConn)
+	conn := core.MustGet[*pg.DB](c, database.TenantConn)
 	c.Set(core.TenantStoreModule, NewPostgresStore(conn.Pool()))
 	return nil
+}
+
+// MigrationDB implements core.MigrationDBProvider ensuring tenant migrations run on the tenant database.
+func (m *module) MigrationDB(_ context.Context, c *core.Container) (*sql.DB, error) {
+	conn := core.MustGet[*pg.DB](c, database.TenantConn)
+	return conn.SQL(), nil
 }
 
 func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Context) error, error) {
@@ -106,5 +114,5 @@ func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Con
 }
 
 func (m *module) Migrations(ctx context.Context, c *core.Container) ([]core.MigrationFile, error) {
-	return make([]core.MigrationFile, 0), nil
+	return infra.Migrations(ctx, m)
 }

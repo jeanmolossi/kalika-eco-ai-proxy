@@ -13,7 +13,7 @@ import (
 func Registry() core.Registry {
 	return core.NewRegistry(
 		remote.NewModule(),
-		database.NewModule(),
+		database.NewGuardrailModule(),
 		guardrails.NewModule(),
 	)
 }
