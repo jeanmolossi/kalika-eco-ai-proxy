@@ -17,7 +17,6 @@ func main() {
 	cfg := toolkitconfig.Load()
 	log := toolkitlogger.New().With("service", "observability")
 	app := core.NewApp(log)
-	cfg.PgDB = toolkitconfig.ChoosePostgres(cfg.ObserveDB, cfg.PgDB)
 
 	defer toolkitlogger.Flush()
 

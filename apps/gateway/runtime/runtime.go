@@ -13,7 +13,7 @@ import (
 // Registry wires the modules required to run the gateway executable.
 func Registry() core.Registry {
 	return core.NewRegistry(
-		database.NewModule(),
+		database.NewGatewayModule(),
 		ratelimit.NewModule(),
 		cache.NewModule(),
 		llm.NewModule(),

@@ -106,12 +106,7 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 	// 5) Migrations
 	a.L.Info("running migrations")
 
-	conn := a.C.MustGet("database:pgconn").(UnwrapConn)
-	if conn == nil {
-		return fmt.Errorf("core.App: unable to retrieve db connection <nil>")
-	}
-
-	if err := RunAllMigrations(ctx, conn.SQL(), mods); err != nil {
+	if err := RunAllMigrations(ctx, a.C, mods); err != nil {
 		return fmt.Errorf("core.App: migrations failed: %w", err)
 	}
 

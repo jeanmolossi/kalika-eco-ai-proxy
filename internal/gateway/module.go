@@ -2,9 +2,12 @@ package gateway
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway/infra"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/gateway/infra/http"
 	"github.com/labstack/echo/v4"
@@ -55,6 +58,12 @@ func (m *module) Provide(ctx context.Context, c *core.Container) error {
 // Migrations implements core.Module.
 func (m *module) Migrations(ctx context.Context, c *core.Container) ([]core.MigrationFile, error) {
 	return infra.Migrations(ctx, m)
+}
+
+// MigrationDB implements core.MigrationDBProvider ensuring gateway migrations run on the gateway database.
+func (m *module) MigrationDB(_ context.Context, c *core.Container) (*sql.DB, error) {
+	conn := core.MustGet[*pg.DB](c, database.GatewayConn)
+	return conn.SQL(), nil
 }
 
 // Routes registers HTTP routes handled by this module.

@@ -1,6 +1,8 @@
+-- 202511201900_refine_guardrail_rules.up.sql
+
 CREATE OR REPLACE FUNCTION apx.default_tenant_id() RETURNS uuid AS $$
-  SELECT id FROM apx.tenants WHERE code = 'dev';
-$$ LANGUAGE sql STABLE;
+  SELECT '11111111-1111-1111-1111-111111111111'::uuid;
+$$ LANGUAGE sql IMMUTABLE;
 
 ALTER TABLE apx.guardrail_rules
     ADD COLUMN IF NOT EXISTS description TEXT DEFAULT NULL,
@@ -17,22 +19,3 @@ BEGIN
     END IF;
 END
 $$;
-
-ALTER TABLE apx.guardrail_rules
-  ALTER COLUMN severity DROP DEFAULT;
-
-ALTER TABLE apx.guardrail_rules
-    ALTER COLUMN severity TYPE apx.guardrail_severity
-    USING severity::apx.guardrail_severity;
-
-ALTER TABLE apx.guardrail_rules
-  ALTER COLUMN severity SET DEFAULT 'medium'::apx.guardrail_severity;
-
-CREATE INDEX IF NOT EXISTS guardrail_rules_tenant_phase_idx
-    ON apx.guardrail_rules (tenant_id, name);
-
-CREATE INDEX IF NOT EXISTS guardrail_rules_enabled_idx
-    ON apx.guardrail_rules (is_active);
-
-ALTER TYPE apx.guardrail_kind ADD VALUE 'regex_block';
-ALTER TYPE apx.guardrail_kind ADD VALUE 'regex_rewrite';

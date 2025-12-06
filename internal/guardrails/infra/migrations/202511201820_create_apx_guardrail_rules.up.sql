@@ -5,7 +5,7 @@ BEGIN;
 CREATE TABLE apx.guardrail_rules (
   id             UUID PRIMARY KEY DEFAULT uuidv7(),
   tenant_id      UUID NOT NULL REFERENCES apx.tenants(id) ON DELETE CASCADE,
-  name           TEXT NOT NULL,              -- "Block password", etc.
+  name           TEXT NOT NULL,
   kind           apx.guardrail_kind NOT NULL,
   is_active      BOOLEAN NOT NULL DEFAULT TRUE,
   priority       INT NOT NULL DEFAULT 100,
@@ -20,4 +20,4 @@ CREATE INDEX idx_guardrail_rules_tenant
 CREATE INDEX idx_guardrail_rules_active
   ON apx.guardrail_rules (tenant_id, is_active);
 
-END;
+COMMIT;

@@ -11,7 +11,7 @@ import (
 // Registry wires the modules required to run the observability service.
 func Registry() core.Registry {
 	return core.NewRegistry(
-		database.NewModule(),
+		database.NewObservabilityModule(),
 		observability.NewModule(),
 	)
 }

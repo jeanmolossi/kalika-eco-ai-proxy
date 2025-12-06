@@ -46,11 +46,14 @@ type MigrationFile struct {
 	Module string
 }
 
-func RunAllMigrations(ctx context.Context, db *sql.DB, modules []Module) error {
-	var all []MigrationFile
+// MigrationDBProvider allows a module to declare which connection should receive its migrations.
+type MigrationDBProvider interface {
+	MigrationDB(ctx context.Context, c *Container) (*sql.DB, error)
+}
 
+func RunAllMigrations(ctx context.Context, c *Container, modules []Module) error {
 	for _, m := range modules {
-		migs, err := m.Migrations(ctx, nil)
+		migs, err := m.Migrations(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -59,19 +62,33 @@ func RunAllMigrations(ctx context.Context, db *sql.DB, modules []Module) error {
 			continue
 		}
 
-		all = append(all, migs...)
+		provider, ok := m.(MigrationDBProvider)
+		if !ok {
+			return fmt.Errorf("module %s does not expose a migration database", m.Name())
+		}
+
+		db, err := provider.MigrationDB(ctx, c)
+		if err != nil {
+			return fmt.Errorf("module %s: migration db: %w", m.Name(), err)
+		}
+
+		if err := applyMigrations(db, migs); err != nil {
+			return fmt.Errorf("module %s: %w", m.Name(), err)
+		}
 	}
 
-	if len(all) == 0 {
+	return nil
+}
+
+func applyMigrations(db *sql.DB, files []MigrationFile) error {
+	if len(files) == 0 {
 		return nil
 	}
 
-	src, err := newMemorySource(all)
+	src, err := newMemorySource(files)
 	if err != nil {
 		return fmt.Errorf("build memory source: %w", err)
 	}
-
-	// Create source in memory for go-migrate
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
