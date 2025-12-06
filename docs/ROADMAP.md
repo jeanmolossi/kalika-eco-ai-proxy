@@ -8,3 +8,5 @@
 - [x] Remover fallbacks `stub-model`/`stub-embed-model` e validar modelos contra allowlist por tenant antes de rotear.
 - [x] Implementar cálculo real de custo no publisher de uso, com tabela de preços por modelo e propagação de RequestID/TraceID.
 - [x] Trocar os publishers de log por filas ou armazenamento persistente para auditoria e billing (ex.: Kafka, Postgres).
+- [ ] Mapear e substituir o `StubClient` de LLM (`internal/llm/stub_client.go`) por fixtures de teste controladas, mantendo apenas clientes reais configuráveis em produção.
+- [ ] Evoluir o `noopSink` de guardrails (`internal/guardrails/simple_engine.go`) para um coletor real de decisões com métricas e persistência.
