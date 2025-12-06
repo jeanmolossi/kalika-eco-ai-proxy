@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/jeanmolossi/maigo v1.2.16
+	github.com/jeanmolossi/maigo v1.2.17
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/segmentio/kafka-go v0.4.49
