@@ -1,4 +1,4 @@
-package tenant
+package app
 
 import (
 	"context"
@@ -40,4 +40,19 @@ type Store interface {
 	FindByAPIKey(ctx context.Context, apiKey string) (*TenantConfig, error)
 	FindByID(ctx context.Context, tenantID string) (*TenantConfig, error)
 	RevokeExpired(ctx context.Context) (int64, error)
+}
+
+type RoutingConfig struct {
+	Providers []ProviderDefinition `json:"providers,omitempty"`
+}
+
+type ProviderDefinition struct {
+	Name             string   `json:"name"`
+	BaseURL          string   `json:"base_url"`
+	APIKey           string   `json:"api_key"`
+	RequestTimeoutMS int      `json:"request_timeout_ms"`
+	MaxRetries       int      `json:"max_retries"`
+	EnableStreaming  bool     `json:"enable_streaming"`
+	ChatModels       []string `json:"chat_models"`
+	EmbedModels      []string `json:"embed_models"`
 }

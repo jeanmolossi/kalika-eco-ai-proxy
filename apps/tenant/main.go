@@ -27,6 +27,7 @@ func main() {
 	}
 
 	cfg.Server = cfg.Tenant
+	cfg.GRPC = cfg.TenantGRPC
 
 	serverCfg := httpx.FromHTTPServer(cfg.Tenant)
 	app.StartServer = httpx.Start(serverCfg)

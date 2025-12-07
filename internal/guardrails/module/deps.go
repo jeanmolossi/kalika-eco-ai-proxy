@@ -6,7 +6,9 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
+	guardrailsadapters "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/adapters"
+	guardrailsapp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/app"
+	guardrailsinfra "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/infra"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 )
 
@@ -15,7 +17,7 @@ const DepsKey = "guardrails:deps"
 
 // Deps groups all dependencies required by the guardrails module.
 type Deps struct {
-	Engine      guardrails.Engine
+	Engine      guardrailsapp.Engine
 	TenantStore pkgtenant.Store
 }
 
@@ -35,12 +37,12 @@ func buildDependencies(c *core.Container) (Deps, error) {
 	return deps, nil
 }
 
-func buildEngine(c *core.Container) (guardrails.Engine, error) {
+func buildEngine(c *core.Container) (guardrailsapp.Engine, error) {
 	cfg := c.Config()
 	logger := c.Logger().With("module", ModuleName)
 
 	if !cfg.GuardrailsEnabled {
-		return guardrails.NewNoopGuardrails(), nil
+		return guardrailsapp.NewNoopGuardrails(), nil
 	}
 
 	db := core.MustGet[*pg.DB](c, database.GuardrailConn)
@@ -48,8 +50,8 @@ func buildEngine(c *core.Container) (guardrails.Engine, error) {
 		return nil, fmt.Errorf("guardrails database connection is required")
 	}
 
-	repo := guardrails.NewPGRuleRepository(db.Pool())
-	sink := guardrails.NewLoggerSink(logger)
+	repo := guardrailsinfra.NewPGRuleRepository(db.Pool())
+	sink := guardrailsadapters.NewLoggerSink(logger)
 
-	return guardrails.NewSimpleEngine(repo, logger, sink), nil
+	return guardrailsapp.NewSimpleEngine(repo, logger, sink), nil
 }

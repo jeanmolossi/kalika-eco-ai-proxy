@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package tenant.v1;
+
+option go_package = "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant/pb;tenantpb";
+
+message Tenant {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string status = 4;
+  string plan_code = 5;
+  int64 max_tokens_month = 6;
+  int64 max_requests_minute = 7;
+  string default_model = 8;
+  bool enable_semantic_cache = 9;
+  int32 cache_ttl_secs = 10;
+  int32 max_prompt_tokens = 11;
+  int32 max_completion_tokens = 12;
+  bytes policy_config = 13;
+}
+
+message GetTenantByAPIKeyRequest {
+  string api_key = 1;
+}
+
+message GetTenantByIDRequest {
+  string tenant_id = 1;
+}
+
+message GetTenantResponse {
+  Tenant tenant = 1;
+}
+
+service TenantService {
+  rpc GetByAPIKey(GetTenantByAPIKeyRequest) returns (GetTenantResponse);
+  rpc GetByID(GetTenantByIDRequest) returns (GetTenantResponse);
+}

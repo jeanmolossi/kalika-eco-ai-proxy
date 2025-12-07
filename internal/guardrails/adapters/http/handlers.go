@@ -5,25 +5,25 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
+	guardrailsapp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/app"
 	pkgtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant"
 	"github.com/labstack/echo/v4"
 )
 
 // Handlers wires guardrails HTTP endpoints to the domain engine.
 type Handlers struct {
-	Engine  guardrails.Engine
+	Engine  guardrailsapp.Engine
 	Tenants pkgtenant.Store
 }
 
 // NewHandlers creates a new Handlers instance.
-func NewHandlers(engine guardrails.Engine, tenants pkgtenant.Store) *Handlers {
+func NewHandlers(engine guardrailsapp.Engine, tenants pkgtenant.Store) *Handlers {
 	return &Handlers{Engine: engine, Tenants: tenants}
 }
 
 // EvaluateInput performs guardrail evaluation for request payloads.
 func (h *Handlers) EvaluateInput(ctx echo.Context) error {
-	var gx guardrails.Context
+	var gx guardrailsapp.Context
 	if err := ctx.Bind(&gx); err != nil {
 		return ctx.NoContent(http.StatusBadRequest)
 	}
@@ -42,7 +42,7 @@ func (h *Handlers) EvaluateInput(ctx echo.Context) error {
 
 // EvaluateOutput performs guardrail evaluation for response payloads.
 func (h *Handlers) EvaluateOutput(ctx echo.Context) error {
-	var gx guardrails.Context
+	var gx guardrailsapp.Context
 	if err := ctx.Bind(&gx); err != nil {
 		return ctx.NoContent(http.StatusBadRequest)
 	}
@@ -59,7 +59,7 @@ func (h *Handlers) EvaluateOutput(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, decision)
 }
 
-func (h *Handlers) ensureTenant(ctx context.Context, gx *guardrails.Context) error {
+func (h *Handlers) ensureTenant(ctx context.Context, gx *guardrailsapp.Context) error {
 	if gx.TenantID == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "tenant_id is required")
 	}

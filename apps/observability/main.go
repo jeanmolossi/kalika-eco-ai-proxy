@@ -27,6 +27,7 @@ func main() {
 	}
 
 	cfg.Server = cfg.Observe
+	cfg.GRPC = cfg.ObserveGRPC
 
 	serverCfg := httpx.FromHTTPServer(cfg.Observe)
 	app.StartServer = httpx.Start(serverCfg)

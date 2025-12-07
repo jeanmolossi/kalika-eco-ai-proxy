@@ -13,7 +13,11 @@ import (
 	"time"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/grpcx"
 	"github.com/labstack/echo/v4"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // App represents the application itself: DI container, HTTP server, logger, etc.
@@ -27,6 +31,14 @@ type App struct {
 	// StartServer allows customizing how the HTTP server is started.
 	// If nil, a default based on echo is used.
 	StartServer func(context.Context, *echo.Echo) func(context.Context) error
+
+	// NewGRPCServer allows overriding how the base gRPC server is constructed.
+	// If nil, grpcx.NewServer is used.
+	NewGRPCServer func(grpcx.Config) (*grpc.Server, *health.Server, error)
+
+	// StartGRPCServer allows customizing how the gRPC server is started.
+	// If nil, grpcx.Start is used.
+	StartGRPCServer func(context.Context, *grpc.Server) (func(context.Context) error, error)
 }
 
 // StartOptions controls how the App is initialized.
@@ -78,6 +90,13 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 	a.C.Set(ConfigModule, opt.Config)
 	a.C.Set(LoggerModule, a.L)
 	a.C.Set(EchoModule, a.E)
+
+	grpcCfg := grpcx.FromGRPCServer(opt.Config.GRPC)
+
+	grpcServer, healthSrv, err := a.prepareGRPC(grpcCfg)
+	if err != nil {
+		return err
+	}
 
 	// 2) Optional hook before modules (custom setup)
 	if opt.BeforeModules != nil {
@@ -131,6 +150,10 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 		}
 	}
 
+	if err := a.registerGRPCServices(mods, grpcServer); err != nil {
+		return err
+	}
+
 	// 8) Start modules (background workers, consumers, schedulers)
 	for _, m := range mods {
 		a.L.Info("starting module", slog.String("module", m.Name()))
@@ -154,6 +177,10 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 	httpStopFn := startServer(ctx, a.E)
 	if httpStopFn != nil {
 		a.stopFns = append(a.stopFns, httpStopFn)
+	}
+
+	if err := a.launchGRPCServer(ctx, grpcCfg, grpcServer, healthSrv); err != nil {
+		return fmt.Errorf("core.App: grpc start failed: %w", err)
 	}
 
 	// 10) Wait for shutdown signal (or ctx.Done)
@@ -194,6 +221,81 @@ func (a *App) Start(ctx context.Context, opt StartOptions) error {
 	}
 
 	a.L.Info("shutdown completed successfully")
+
+	return nil
+}
+
+func (a *App) prepareGRPC(cfg grpcx.Config) (*grpc.Server, *health.Server, error) {
+	if !cfg.Enabled {
+		return nil, nil, nil
+	}
+
+	buildGRPC := a.NewGRPCServer
+	if buildGRPC == nil {
+		buildGRPC = grpcx.NewServer
+	}
+
+	grpcServer, healthSrv, err := buildGRPC(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("core.App: build grpc server: %w", err)
+	}
+
+	if healthSrv != nil {
+		healthSrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	}
+
+	a.C.Set(GRPCServerModule, grpcServer)
+
+	return grpcServer, healthSrv, nil
+}
+
+func (a *App) registerGRPCServices(mods []Module, grpcServer *grpc.Server) error {
+	if grpcServer == nil {
+		return nil
+	}
+
+	for _, m := range mods {
+		grpcModule, ok := m.(GRPCModule)
+		if !ok {
+			continue
+		}
+
+		a.L.Info("registering grpc services", slog.String("module", m.Name()))
+
+		if err := grpcModule.RegisterGRPC(grpcServer, a.C); err != nil {
+			return fmt.Errorf("core.App: grpc registration failed for module %s: %w", m.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+func (a *App) launchGRPCServer(ctx context.Context, cfg grpcx.Config, grpcServer *grpc.Server, healthSrv *health.Server) error {
+	if grpcServer == nil {
+		return nil
+	}
+
+	startGRPC := a.StartGRPCServer
+	if startGRPC == nil {
+		startGRPC = grpcx.Start(cfg)
+	}
+
+	grpcStopFn, err := startGRPC(ctx, grpcServer)
+	if err != nil {
+		return err
+	}
+
+	if grpcStopFn != nil {
+		stopFn := grpcStopFn
+
+		a.stopFns = append(a.stopFns, func(ctx context.Context) error {
+			if healthSrv != nil {
+				healthSrv.Shutdown()
+			}
+
+			return stopFn(ctx)
+		})
+	}
 
 	return nil
 }

@@ -16,10 +16,16 @@ type Config struct {
 
 	Log     Log        `envPrefix:"LOG_"`
 	Server  HTTPServer `envPrefix:"SERVER_"`
+	GRPC    GRPCServer `envPrefix:"GRPC_"`
 	Gateway HTTPServer `envPrefix:"GATEWAY_SERVER_"`
 	Tenant  HTTPServer `envPrefix:"TENANT_SERVER_"`
 	Guard   HTTPServer `envPrefix:"GUARDRAIL_SERVER_"`
 	Observe HTTPServer `envPrefix:"OBSERVABILITY_SERVER_"`
+
+	GatewayGRPC GRPCServer `envPrefix:"GATEWAY_GRPC_"`
+	TenantGRPC  GRPCServer `envPrefix:"TENANT_GRPC_"`
+	GuardGRPC   GRPCServer `envPrefix:"GUARDRAIL_GRPC_"`
+	ObserveGRPC GRPCServer `envPrefix:"OBSERVABILITY_GRPC_"`
 
 	LLM       LLM       `envPrefix:"LLM_"`
 	PgDB      Postgres  `envPrefix:"POSTGRES_"`
@@ -46,10 +52,16 @@ func loadEnv() *Config {
 	}
 
 	c.Server.Normalize()
+	c.GRPC.Normalize()
 	c.Gateway.Normalize()
 	c.Tenant.Normalize()
 	c.Guard.Normalize()
 	c.Observe.Normalize()
+
+	c.GatewayGRPC.Normalize()
+	c.TenantGRPC.Normalize()
+	c.GuardGRPC.Normalize()
+	c.ObserveGRPC.Normalize()
 
 	return &c
 }

@@ -1,6 +1,6 @@
 package tenant
 
-import platformtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant"
+import platformtenant "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/app"
 
 // Re-export tenant-facing domain contracts so that dependants can import
 // a stable package path while the implementation lives under internal/.

@@ -4,9 +4,10 @@ package core
 // You can follow this pattern to register other modules.
 
 const (
-	ConfigModule = "core:config"
-	LoggerModule = "core:logger"
-	EchoModule   = "core:echo"
+	ConfigModule     = "core:config"
+	LoggerModule     = "core:logger"
+	EchoModule       = "core:echo"
+	GRPCServerModule = "core:grpc"
 
 	TenantStoreModule    = "tenant:store"
 	RateLimiterModule    = "ratelimit:limiter"
@@ -17,3 +18,7 @@ const (
 	RouterModule         = "llm:router"
 	TokenizerModule      = "llm:tokenizer" //nolint:gosec // container key identifier
 )
+
+func GRPCClientModule(name string) string {
+	return "grpcclient:" + name
+}

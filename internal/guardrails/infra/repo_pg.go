@@ -1,4 +1,4 @@
-package guardrails
+package infra
 
 import (
 	"context"
@@ -6,20 +6,26 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	guardrailsapp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/app"
 )
 
 type pgRuleRepository struct {
 	pool *pgxpool.Pool
 }
 
-func NewPGRuleRepository(pool *pgxpool.Pool) RuleRepository {
+func NewPGRuleRepository(pool *pgxpool.Pool) guardrailsapp.RuleRepository {
 	return &pgRuleRepository{pool: pool}
 }
 
 // ListRulesForTenantPhase implements RuleRepository.
-func (p *pgRuleRepository) ListRulesForTenantPhase(ctx context.Context, tenantID string, phase Phase) ([]Rule, error) {
+func (p *pgRuleRepository) ListRulesForTenantPhase(
+	ctx context.Context,
+	tenantID string,
+	phase guardrailsapp.Phase,
+) ([]guardrailsapp.Rule, error) {
 	const query = `
-        SELECT 
+        SELECT
             id,
             tenant_id,
             name,
@@ -39,11 +45,11 @@ func (p *pgRuleRepository) ListRulesForTenantPhase(ctx context.Context, tenantID
 	}
 	defer rows.Close()
 
-	out := make([]Rule, 0)
+	out := make([]guardrailsapp.Rule, 0)
 
 	for rows.Next() {
 		var (
-			rule   Rule
+			rule   guardrailsapp.Rule
 			rawCfg []byte
 		)
 
@@ -60,7 +66,7 @@ func (p *pgRuleRepository) ListRulesForTenantPhase(ctx context.Context, tenantID
 		}
 
 		if len(rawCfg) == 0 {
-			rule.Config = RuleConfig{}
+			rule.Config = guardrailsapp.RuleConfig{}
 		} else {
 			if err := json.Unmarshal(rawCfg, &rule.Config); err != nil {
 				continue
@@ -68,7 +74,7 @@ func (p *pgRuleRepository) ListRulesForTenantPhase(ctx context.Context, tenantID
 		}
 
 		if rule.Config.Phase == "" {
-			rule.Config.Phase = PhaseInput
+			rule.Config.Phase = guardrailsapp.PhaseInput
 		}
 
 		out = append(out, rule)

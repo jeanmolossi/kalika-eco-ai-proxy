@@ -1,8 +1,10 @@
-package guardrails
+package adapters
 
 import (
 	"context"
 	"log/slog"
+
+	guardrailsapp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/app"
 )
 
 type LoggerSink struct {
@@ -15,7 +17,7 @@ func NewLoggerSink(logger *slog.Logger) *LoggerSink {
 	}
 }
 
-func (s *LoggerSink) RecordDecision(ctx context.Context, gx Context, phase Phase, dec Decision) {
+func (s *LoggerSink) RecordDecision(ctx context.Context, gx guardrailsapp.Context, phase guardrailsapp.Phase, dec guardrailsapp.Decision) {
 	ev := buildDecisionEvent(gx, phase, dec)
 
 	s.logger.InfoContext(ctx, "guardrail_decision",
@@ -41,7 +43,7 @@ func (s *LoggerSink) RecordDecision(ctx context.Context, gx Context, phase Phase
 	)
 }
 
-func buildDecisionEvent(gx Context, phase Phase, dec Decision) DecisionEvent {
+func buildDecisionEvent(gx guardrailsapp.Context, phase guardrailsapp.Phase, dec guardrailsapp.Decision) guardrailsapp.DecisionEvent {
 	inputBytes := 0
 	for _, m := range gx.InputMessages {
 		inputBytes += len(m)
@@ -61,7 +63,7 @@ func buildDecisionEvent(gx Context, phase Phase, dec Decision) DecisionEvent {
 		}
 	}
 
-	ev := DecisionEvent{
+	ev := guardrailsapp.DecisionEvent{
 		TenantID:   gx.TenantID,
 		APIKeyID:   gx.APIKeyID,
 		UserID:     gx.UserID,
@@ -86,7 +88,7 @@ func buildDecisionEvent(gx Context, phase Phase, dec Decision) DecisionEvent {
 		Environment: gx.Tags["environment"],
 	}
 
-	if phase == PhaseInput {
+	if phase == guardrailsapp.PhaseInput {
 		ev.Direction = "request"
 	} else {
 		ev.Direction = "response"
