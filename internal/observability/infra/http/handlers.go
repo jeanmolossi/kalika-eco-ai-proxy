@@ -3,8 +3,8 @@ package http
 import (
 	"net/http"
 
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/usage"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/app/audit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/app/usage"
 	"github.com/labstack/echo/v4"
 )
 

@@ -23,6 +23,7 @@ func main() {
 	registry := runtime.Registry()
 
 	cfg.Server = cfg.Gateway
+	cfg.GRPC = cfg.GatewayGRPC
 
 	serverCfg := httpx.FromHTTPServer(cfg.Gateway)
 	app.StartServer = httpx.Start(serverCfg)

@@ -1,4 +1,4 @@
-package guardrails
+package app
 
 import (
 	"context"
@@ -15,12 +15,13 @@ const (
 type Action string
 
 const (
-	ActionAllow   Action = "allow"   // segue o fluxo normal
-	ActionBlock   Action = "block"   // retorna erro pro cliente
-	ActionRewrite Action = "rewrite" // usa conteúdo reescrito
+	ActionAllow   Action = "allow"
+	ActionBlock   Action = "block"
+	ActionRewrite Action = "rewrite"
 )
 
 // Contexto genérico do proxy pra guardrails
+// You monta isso no app (chat/embeddings).
 type Context struct {
 	TenantID   string
 	APIKeyID   string

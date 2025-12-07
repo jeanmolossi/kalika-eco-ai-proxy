@@ -9,8 +9,8 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
+	tenanthttp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/adapters/http"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/infra"
-	tenanthttp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/infra/http"
 	"github.com/labstack/echo/v4"
 )
 

@@ -4,9 +4,10 @@ package core
 // You can follow this pattern to register other modules.
 
 const (
-	ConfigModule = "core:config"
-	LoggerModule = "core:logger"
-	EchoModule   = "core:echo"
+	ConfigModule     = "core:config"
+	LoggerModule     = "core:logger"
+	EchoModule       = "core:echo"
+	GRPCServerModule = "core:grpc"
 
 	TenantStoreModule    = "tenant:store"
 	RateLimiterModule    = "ratelimit:limiter"

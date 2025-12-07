@@ -1,6 +1,6 @@
 package guardrails
 
-import internal "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails"
+import internal "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/guardrails/app"
 
 // Public contract for guardrails domain used by other bounded contexts.
 type (

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/audit"
-	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/usage"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/adapters/audit"
+	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/observability/adapters/usage"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/toolkit/config"
 	"github.com/segmentio/kafka-go"
 )
