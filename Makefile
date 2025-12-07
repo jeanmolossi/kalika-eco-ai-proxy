@@ -22,9 +22,9 @@ fmt: ## Format code
 	@go fmt ./...
 
 cert: ## Generate SSL certificate
-	@if [ ! -f "key.pem" ]; then \
-		go run /usr/local/go/src/crypto/tls/generate_cert.go --host localhost;\
-	fi
+@if [ ! -f "key.pem" ]; then \
+go run /usr/local/go/src/crypto/tls/generate_cert.go --host localhost,127.0.0.1,gateway,tenant,guardrails,observability;\
+fi
 
 docker-build: ## Build and run Docker compose for development
 	@docker compose up --build

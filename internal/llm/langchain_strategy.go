@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jeanmolossi/maigo/pkg/httpx"
+	"github.com/jeanmolossi/maigo/pkg/httpx/logger"
+	"github.com/jeanmolossi/maigo/pkg/httpx/retry"
 	maigo "github.com/jeanmolossi/maigo/pkg/maigo"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
 	"github.com/tmc/langchaingo/embeddings"
@@ -388,10 +391,29 @@ func newMaiGoHTTPClient(baseURL string, timeout time.Duration) *http.Client {
 		return &http.Client{Timeout: timeout}
 	}
 
-	client := maigo.NewClient(trimmed).Config().SetTimeout(timeout).Build()
+	client := maigo.NewClient(trimmed).
+		Config().SetTimeout(timeout).
+		Config().
+		SetCustomTransport(httpx.Compose(http.DefaultTransport,
+			logger.LoggerRoundTripper(logger.LoggerHooks{
+				LogEnd:        true,
+				SupressErrors: true,
+				EndMessage:    "llm_remote_request_end",
+			}),
+			retry.WithRetry(retry.RetryConfig{
+				MaxAttempts: 2,
+				AllowedMethods: map[string]bool{
+					http.MethodGet:    true,
+					http.MethodPost:   true,
+					http.MethodDelete: true,
+				},
+			}),
+		)).
+		Build()
 
 	config, ok := client.(maigocontracts.ClientConfig)
 	if !ok {
+		fmt.Println("WRONG TYPE USE DEFAULT")
 		return &http.Client{Timeout: timeout}
 	}
 

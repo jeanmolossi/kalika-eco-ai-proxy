@@ -124,26 +124,34 @@ func Start(cfg Config) func(ctx context.Context, e *echo.Echo) func(context.Cont
 			IdleTimeout:       cfg.IdleTimeout,
 		}
 
+		errCh := make(chan error, 1)
+
 		// optional TLS (auto HTTP/2 in Go when TLS on)
 		if cfg.EnableTLS {
-			tlsCfg := &tls.Config{
-				MinVersion: tls.VersionTLS12,
-				// PreferServerCipherSuites deprecated, not set.
-				// ClientAuth is need mTLS
+			if cfg.TLSCertFile == "" || cfg.TLSKeyFile == "" {
+				errCh <- fmt.Errorf("tls enabled but cert or key file not provided")
+			} else {
+				cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
+				if err != nil {
+					errCh <- fmt.Errorf("load tls key pair: %w", err)
+				} else {
+					srv.TLSConfig = &tls.Config{
+						MinVersion:   tls.VersionTLS12,
+						Certificates: []tls.Certificate{cert},
+					}
+				}
 			}
-
-			// if cfg.ClientCAsPEM != "" {
-			// 	 load client CAs if need mTLS
-			// }
-
-			srv.TLSConfig = tlsCfg
 		}
-
-		errCh := make(chan error, 1)
 
 		go func() {
 			if cfg.EnableTLS {
-				errCh <- srv.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
+				if srv.TLSConfig == nil || len(srv.TLSConfig.Certificates) == 0 {
+					errCh <- fmt.Errorf("tls enabled but no certificates configured")
+					return
+				}
+
+				errCh <- srv.ListenAndServeTLS("", "")
+
 				return
 			}
 

@@ -13,9 +13,9 @@ type HTTPServer struct {
 	AllowedOrigins      []string      `env:"ALLOWED_ORIGINS"        envSeparator:","`
 	MaxRequestBodyBytes int64         `env:"MAX_REQUEST_BODY_BYTES" envDefault:"20971520"`
 
-	TLSCertFile string `env:"TLS_CERTFILE"`
-	TLSKeyFile  string `env:"TLS_KEYFILE"`
-	EnableTLS   bool   `env:"ENABLE_TLS"`
+	TLSCertFile string `env:"TLS_CERTFILE" envDefault:"cert.pem"`
+	TLSKeyFile  string `env:"TLS_KEYFILE"  envDefault:"key.pem"`
+	EnableTLS   bool   `env:"ENABLE_TLS"   envDefault:"true"`
 }
 
 // Normalize ensures the configured base path is standardized before being used across the app.
