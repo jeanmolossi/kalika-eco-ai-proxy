@@ -7,7 +7,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/jeanmolossi/maigo v1.2.17
+	github.com/jeanmolossi/maigo v1.2.19
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/segmentio/kafka-go v0.4.49

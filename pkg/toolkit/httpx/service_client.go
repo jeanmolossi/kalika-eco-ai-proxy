@@ -10,6 +10,7 @@ import (
 
 	maigohttpx "github.com/jeanmolossi/maigo/pkg/httpx"
 	"github.com/jeanmolossi/maigo/pkg/httpx/circuitbreaker"
+	"github.com/jeanmolossi/maigo/pkg/httpx/logger"
 	"github.com/jeanmolossi/maigo/pkg/httpx/retry"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
 )
@@ -52,6 +53,12 @@ func NewServiceHTTPClient(opts ServiceClientOptions) (*http.Client, error) {
 
 	transport := maigohttpx.Compose(
 		baseTransport,
+		logger.LoggerRoundTripper(logger.LoggerHooks{
+			LogStart:      false,
+			LogEnd:        true,
+			EndMessage:    "remote_request_end",
+			SupressErrors: true,
+		}),
 		circuitbreaker.WithCircuitBreaker(newCircuitBreakerConfig(opts.Breaker)),
 		retry.WithRetry(newRetryConfig(opts)),
 	)

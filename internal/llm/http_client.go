@@ -6,9 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/jeanmolossi/maigo/pkg/httpx"
+	"github.com/jeanmolossi/maigo/pkg/httpx/logger"
+	"github.com/jeanmolossi/maigo/pkg/httpx/retry"
 	maigo "github.com/jeanmolossi/maigo/pkg/maigo"
 	maigocontracts "github.com/jeanmolossi/maigo/pkg/maigo/contracts"
 	"github.com/jeanmolossi/maigo/pkg/maigo/header"
@@ -31,7 +35,6 @@ type ProviderSettings struct {
 type HTTPClient struct {
 	client          maigocontracts.ClientHTTPMethods
 	metrics         MetricsRecorder
-	maxRetries      int
 	enableStreaming bool
 }
 
@@ -50,13 +53,22 @@ func NewHTTPClient(settings ProviderSettings, metrics MetricsRecorder) (*HTTPCli
 		timeout = 30 * time.Second
 	}
 
-	retries := settings.MaxRetries
-	if retries < 0 {
-		retries = 0
-	}
-
-	builder := maigo.NewClient(strings.TrimRight(settings.BaseURL, "/"))
-	builder.Config().SetTimeout(timeout)
+	builder := maigo.NewClient(strings.TrimRight(settings.BaseURL, "/")).
+		Config().SetTimeout(timeout).
+		Config().SetCustomTransport(httpx.Compose(http.DefaultTransport,
+		logger.LoggerRoundTripper(logger.LoggerHooks{
+			LogStart: true,
+			LogEnd:   true,
+		}),
+		retry.WithRetry(retry.RetryConfig{
+			MaxAttempts: settings.MaxRetries,
+			AllowedMethods: map[string]bool{
+				http.MethodGet:    true,
+				http.MethodPost:   true,
+				http.MethodDelete: true,
+			},
+		}),
+	))
 
 	if settings.APIKey != "" {
 		builder.Header().Set(header.Authorization, "Bearer "+settings.APIKey)
@@ -65,7 +77,6 @@ func NewHTTPClient(settings ProviderSettings, metrics MetricsRecorder) (*HTTPCli
 	return &HTTPClient{
 		client:          builder.Build(),
 		metrics:         metrics,
-		maxRetries:      retries,
 		enableStreaming: settings.EnableStreaming,
 	}, nil
 }
@@ -109,41 +120,22 @@ func (c *HTTPClient) Embed(ctx context.Context, req EmbedRequest) (EmbedResponse
 }
 
 func (c *HTTPClient) doRequest(ctx context.Context, path string, body any) (*maigo.Response, error) {
-	retries := c.maxRetries + 1
-
 	var (
-		resp   *maigo.Response
-		err    error
-		status int
+		resp *maigo.Response
+		err  error
 	)
 
-	for attempt := 0; attempt < retries; attempt++ {
-		resp, err = c.singleRequest(ctx, path, body)
-		if err == nil && !resp.Status().Is5xxServerError() {
-			return resp, nil
-		}
-
-		if resp != nil {
-			status = resp.Status().Code()
-			resp.Body().Close()
-			resp = nil
-		}
-
-		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
-			time.Sleep(time.Duration(attempt+1) * 150 * time.Millisecond)
-			continue
-		}
+	resp, err = c.singleRequest(ctx, path, body)
+	if err == nil && !resp.Status().Is5xxServerError() {
+		return resp, nil
 	}
 
-	if err == nil {
-		if status != 0 {
-			return nil, fmt.Errorf("llm: upstream %d after %d attempts", status, retries)
-		}
-
-		return nil, fmt.Errorf("llm: request failed after %d attempts", retries)
+	if resp != nil {
+		resp.Body().Close()
+		resp = nil
 	}
 
-	return nil, fmt.Errorf("llm: request failed after %d attempts: %w", retries, err)
+	return nil, fmt.Errorf("llm: request failed: %w", err)
 }
 
 func (c *HTTPClient) singleRequest(ctx context.Context, path string, body any) (*maigo.Response, error) {
