@@ -2,9 +2,11 @@ package infra
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,68 +22,89 @@ func NewPostgresStore(pool *pgxpool.Pool) tenantapp.Store {
 	return &postgresStore{pool: pool}
 }
 
-// FindByAPIKey retrieves tenant configuration by API key.
+// FindByAPIKey implements Store.
 func (p *postgresStore) FindByAPIKey(ctx context.Context, apiKey string) (*tenantapp.TenantConfig, error) {
-	if apiKey == "" {
-		return nil, tenantapp.ErrInvalidAPIKey
+	prefix, err := extractPrefix(apiKey)
+	if err != nil {
+		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	sum := sha256.Sum256([]byte(strings.TrimSpace(strings.TrimPrefix(apiKey, "Bearer "))))
+	secretHash := sum[:]
 
 	const query = `
         SELECT
             t.id,
             t.code,
             t.name,
-            t.status,
+            t.status::text,
             t.plan_code,
             t.max_tokens_month,
             t.max_requests_minute,
-            t.default_model,
-            t.enable_semantic_cache,
-            t.cache_ttl_secs,
-            t.max_prompt_tokens,
-            t.max_completion_tokens,
-            t.policy_config
-        FROM apx.tenants t
-        JOIN apx.api_keys k ON k.tenant_id = t.id
-        WHERE k.key = $1 AND k.expires_at > NOW();`
+            p.default_model,
+            p.enable_semantic_cache,
+            p.cache_ttl_seconds,
+            p.max_prompt_tokens,
+            p.max_completion_tokens,
+            COALESCE(p.config, '{}'::jsonb) AS policy_config
+        FROM apx.tenant_api_keys k
+        JOIN apx.tenants t ON t.id = k.tenant_id
+        LEFT JOIN apx.tenant_policies p ON p.tenant_id = t.id
+            AND p.is_active = TRUE
+        WHERE
+            k.prefix = $1
+            AND k.secret_hash = $2
+            AND k.status = 'active'
+            AND (k.expires_at IS NULL OR k.expires_at > now())
+        LIMIT 1;`
 
-	row := p.pool.QueryRow(ctx, query, apiKey)
+	row := p.pool.QueryRow(ctx, query, prefix, secretHash)
 
 	return scanTenant(row)
 }
 
+// FindByID implements Store.
 func (p *postgresStore) FindByID(ctx context.Context, tenantID string) (*tenantapp.TenantConfig, error) {
 	const query = `
-        SELECT
+SELECT
             t.id,
             t.code,
             t.name,
-            t.status,
+            t.status::text,
             t.plan_code,
             t.max_tokens_month,
             t.max_requests_minute,
-            t.default_model,
-            t.enable_semantic_cache,
-            t.cache_ttl_secs,
-            t.max_prompt_tokens,
-            t.max_completion_tokens,
-            t.policy_config
+            p.default_model,
+            p.enable_semantic_cache,
+            p.cache_ttl_seconds,
+            p.max_prompt_tokens,
+            p.max_completion_tokens,
+            COALESCE(p.config, '{}'::jsonb) AS policy_config
         FROM apx.tenants t
-        WHERE t.id = $1;`
+        LEFT JOIN apx.tenant_policies p ON p.tenant_id = t.id AND p.is_active = TRUE
+        WHERE t.id = $1
+        LIMIT 1;`
+
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
 
 	row := p.pool.QueryRow(ctx, query, tenantID)
 
 	return scanTenant(row)
 }
 
+// RevokeExpired marks expired API keys as inactive to reduce attack surface.
 func (p *postgresStore) RevokeExpired(ctx context.Context) (int64, error) {
-	const query = `
-        UPDATE apx.api_keys SET expires_at = now() WHERE expires_at < now() RETURNING id;
-        `
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
 
-	cmd, err := p.pool.Exec(ctx, query)
+	cmd, err := p.pool.Exec(ctx, `UPDATE apx.tenant_api_keys SET status = 'inactive', updated_at = now()
+WHERE status = 'active' AND expires_at IS NOT NULL AND expires_at <= now()`)
 	if err != nil {
-		return 0, fmt.Errorf("revoke expired api keys: %w", err)
+		return 0, err
 	}
 
 	return cmd.RowsAffected(), nil
@@ -89,40 +112,72 @@ func (p *postgresStore) RevokeExpired(ctx context.Context) (int64, error) {
 
 func scanTenant(row pgx.Row) (*tenantapp.TenantConfig, error) {
 	var (
-		tenant tenantapp.TenantConfig
-		rawCfg []byte
+		cfg            tenantapp.TenantConfig
+		policyJSON     []byte
+		status         string
+		maxTokensMonth int64
+		maxReqMin      int32
 	)
 
-	if err := row.Scan(
-		&tenant.ID,
-		&tenant.Code,
-		&tenant.Name,
-		&tenant.Status,
-		&tenant.PlanCode,
-		&tenant.MaxTokensMonth,
-		&tenant.MaxRequestsMinute,
-		&tenant.DefaultModel,
-		&tenant.EnableSemanticCache,
-		&tenant.CacheTTLSecs,
-		&tenant.MaxPromptTokens,
-		&tenant.MaxCompletionTokens,
-		&rawCfg,
-	); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+	err := row.Scan(
+		&cfg.ID,
+		&cfg.Code,
+		&cfg.Name,
+		&status,
+		&cfg.PlanCode,
+		&maxTokensMonth,
+		&maxReqMin,
+		&cfg.DefaultModel,
+		&cfg.EnableSemanticCache,
+		&cfg.CacheTTLSecs,
+		&cfg.MaxPromptTokens,
+		&cfg.MaxCompletionTokens,
+		&policyJSON,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
 			return nil, tenantapp.ErrNotFound
 		}
 
-		return nil, fmt.Errorf("scan tenant: %w", err)
+		return nil, tenantapp.ErrNotFound
 	}
 
-	if len(rawCfg) > 0 {
-		tenant.PolicyConfigRaw = rawCfg
+	cfg.Status = status
+	cfg.MaxTokensMonth = maxTokensMonth
+	cfg.MaxRequestsMinute = int64(maxReqMin)
+	cfg.PolicyConfigRaw = policyJSON
 
-		var parsed tenantapp.PolicyConfig
-		if err := json.Unmarshal(rawCfg, &parsed); err == nil {
-			tenant.ParsedPolicyConfig = &parsed
+	if len(policyJSON) > 0 && string(policyJSON) != "{}" {
+		var pc tenantapp.PolicyConfig
+		if err := json.Unmarshal(policyJSON, &pc); err == nil {
+			cfg.ParsedPolicyConfig = &pc
 		}
 	}
 
-	return &tenant, nil
+	if cfg.Status != "active" && cfg.Status != "trialing" {
+		return nil, tenantapp.ErrInactiveTenant
+	}
+
+	return &cfg, nil
+}
+
+func extractPrefix(apiKey string) (string, error) {
+	apiKey = strings.TrimSpace(apiKey)
+	if apiKey == "" {
+		return "", tenantapp.ErrInvalidAPIKey
+	}
+
+	// allows "Bearer xxx"
+	if strings.HasPrefix(strings.ToLower(apiKey), "bearer ") {
+		apiKey = strings.TrimSpace(apiKey[7:])
+	}
+
+	idx := strings.LastIndex(apiKey, "_")
+	if idx <= 0 {
+		return "", fmt.Errorf("%w: missing underscore separator", tenantapp.ErrInvalidAPIKey)
+	}
+
+	prefix := apiKey[:idx]
+
+	return prefix, nil
 }

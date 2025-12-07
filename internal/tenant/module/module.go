@@ -9,9 +9,12 @@ import (
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/core"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/database/pg"
+	grpcadapter "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/adapters/grpc"
 	tenanthttp "github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/adapters/http"
 	"github.com/jeanmolossi/kalika-eco-ai-proxy/internal/tenant/infra"
+	tenantpb "github.com/jeanmolossi/kalika-eco-ai-proxy/pkg/tenant/pb"
 	"github.com/labstack/echo/v4"
+	"google.golang.org/grpc"
 )
 
 const ModuleName = "tenant"
@@ -98,6 +101,13 @@ func (m *module) Start(ctx context.Context, c *core.Container) (func(context.Con
 
 		return nil
 	}, nil
+}
+
+func (m *module) RegisterGRPC(server *grpc.Server, c *core.Container) error {
+	deps := MustDepsFromContainer(c)
+	tenantpb.RegisterTenantServiceServer(server, grpcadapter.NewServer(deps.Store))
+
+	return nil
 }
 
 func (m *module) Migrations(ctx context.Context, c *core.Container) ([]core.MigrationFile, error) {

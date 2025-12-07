@@ -18,3 +18,7 @@ const (
 	RouterModule         = "llm:router"
 	TokenizerModule      = "llm:tokenizer" //nolint:gosec // container key identifier
 )
+
+func GRPCClientModule(name string) string {
+	return "grpcclient:" + name
+}
