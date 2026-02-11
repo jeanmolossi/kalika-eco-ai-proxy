@@ -3,7 +3,7 @@
 ############################
 # Stage 1: tools (reflex)
 ############################
-FROM golang:1.25-alpine3.22 AS tools
+FROM golang:1.26-alpine3.22 AS tools
 
 # Diretório de trabalho só pra ferramentas
 WORKDIR /tools
@@ -17,7 +17,7 @@ RUN GOBIN=/tmp/bin go install github.com/cespare/reflex@latest
 ############################
 # Stage 2: dev
 ############################
-FROM golang:1.25-alpine3.22 AS dev
+FROM golang:1.26-alpine3.22 AS dev
 
 WORKDIR /app
 
